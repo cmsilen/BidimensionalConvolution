@@ -9,8 +9,8 @@
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
 
-#define NTHREADS 1
-#define LAYERS_NUM NTHREADS * 10
+#define NTHREADS 2
+#define LAYERS_NUM 100
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
