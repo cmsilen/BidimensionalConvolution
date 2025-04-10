@@ -9,8 +9,8 @@
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
 
-#define LAYERS_NUM 32 * 10
-#define NTHREADS 32
+#define NTHREADS 1
+#define LAYERS_NUM 1 * 10
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
@@ -119,11 +119,16 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     struct parameters* params = (struct parameters*)lpParam;
 
     for(i = params->startIndex; i < params->endIndex; i++) {
+    	printf("%d", i);
         result = bidimensionalConvolution(matrices[i], filters[i]);
     }
+    return 0;
 }
 
 int main(void) {
+    LARGE_INTEGER start, end, freq;
+    QueryPerformanceFrequency(&freq);
+
     uint16_t i;
     matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
     filters = malloc(sizeof(int16_t**) * LAYERS_NUM);
@@ -147,11 +152,15 @@ int main(void) {
 
     // computation phase
     printf("starting computations\n");
-    for(i = 0; i < layersPerThread; i++) {
+    QueryPerformanceCounter(&start);
+    for(i = 0; i < NTHREADS; i++) {
         threads[i] = CreateThread(NULL, 0, threadFun, params[i], 0, NULL);
     }
     WaitForMultipleObjects(NTHREADS, threads, TRUE, INFINITE);
+    QueryPerformanceCounter(&end);
     printf("ended computations\n");
+    double elapsedTime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
+    printf("execution time: %.3f ms\n", elapsedTime);
 
     for(i = 0; i < NTHREADS; i++) {
         CloseHandle(threads[i]);

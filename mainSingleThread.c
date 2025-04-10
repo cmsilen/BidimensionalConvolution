@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <windows.h>
 #define ROWS_MATRIX 3840
 #define COLUMNS_MATRIX 2160
 #define LAYERS_NUM 100
@@ -99,6 +100,9 @@ void printMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
 }
 
 int main(void) {
+    LARGE_INTEGER start, end, freq;
+    QueryPerformanceFrequency(&freq);
+
     uint16_t i;
     int16_t*** matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
     int16_t*** filters = malloc(sizeof(int16_t**) * LAYERS_NUM);
@@ -114,10 +118,14 @@ int main(void) {
 
     // computation phase
     printf("starting computations\n");
+    QueryPerformanceCounter(&start);
     for(i = 0; i < LAYERS_NUM; i++) {
         result = bidimensionalConvolution(matrices[i], filters[i]);
     }
+    QueryPerformanceCounter(&end);
     printf("ended computations\n");
+    double elapsedTime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
+    printf("execution time: %.3f ms\n", elapsedTime);
 
     // releasing memory
     for(i = 0; i < LAYERS_NUM; i++) {
@@ -125,6 +133,5 @@ int main(void) {
         uninitializeMatrix(filters[i], ROWS_FILTER, COLUMNS_FILTER);
     }
 
-    //printMatrix(result, ROWS_MATRIX, COLUMNS_MATRIX);
     return 0;
 }
