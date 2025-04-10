@@ -10,7 +10,7 @@
 #define MIN_NUMBER -5
 
 #define NTHREADS 1
-#define LAYERS_NUM 1 * 10
+#define LAYERS_NUM NTHREADS * 10
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
@@ -119,7 +119,6 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     struct parameters* params = (struct parameters*)lpParam;
 
     for(i = params->startIndex; i < params->endIndex; i++) {
-    	printf("%d", i);
         result = bidimensionalConvolution(matrices[i], filters[i]);
     }
     return 0;
