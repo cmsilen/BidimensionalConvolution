@@ -2,15 +2,17 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <windows.h>
-#define ROWS_MATRIX 1080
-#define COLUMNS_MATRIX 720
+#define ROWS_MATRIX 3840
+#define COLUMNS_MATRIX 2160
 #define ROWS_FILTER 3
 #define COLUMNS_FILTER 3
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
-#define NTHREADS 2
-#define LAYERS_NUM 100
+#define LAYERS_NUM 3    // rgb layers
+
+#define NTHREADS 1
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
@@ -82,44 +84,26 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
     return result;
 }
 
-int16_t** bidimensionalConvolution(int16_t** matrix, int16_t** filter) {
-    int16_t** result = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
-
-    for (int i = 0; i < ROWS_MATRIX; i++) {
-        for (int j = 0; j < COLUMNS_MATRIX; j++) {
-            result[i][j] = applyFilter(matrix, i, j, filter);
-        }
-    }
-    return result;
-}
-
-void printMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
-    uint16_t i, j;
-    
-    for(i = 0; i < rows; i++) {
-        for(j = 0; j < cols; j++) {
-            printf("%d\t", matrix[i][j]);
-        }
-        printf("\n");
-    }
-}
-
-
 struct parameters {
-    uint8_t startIndex;
-    uint8_t endIndex;
+    uint16_t startIndex;
+    uint16_t endIndex;
 };
 
 int16_t*** matrices;
-int16_t*** filters;
+int16_t** filter;
+int16_t*** results;
+
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
-    int16_t** result;
-    uint8_t i;
+    uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
 
-    for(i = params->startIndex; i < params->endIndex; i++) {
-        result = bidimensionalConvolution(matrices[i], filters[i]);
+    for(i = 0; i < LAYERS_NUM; i++) {
+        for(j = params->startIndex; j < params->endIndex; j++) {
+            for(k = 0; k < COLUMNS_MATRIX; k++) {
+                results[i][j][k] = applyFilter(matrices[i], j, k, filter);
+            }
+        }
     }
     return 0;
 }
@@ -130,7 +114,8 @@ int main(void) {
 
     uint16_t i;
     matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    filters = malloc(sizeof(int16_t**) * LAYERS_NUM);
+    filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    results = malloc(sizeof(int16_t**) * LAYERS_NUM);
     HANDLE threads[NTHREADS];
     struct parameters* params[NTHREADS];
 
@@ -138,18 +123,36 @@ int main(void) {
     printf("generating layers\n");
     for(i = 0; i < LAYERS_NUM; i++) {
         matrices[i] = generateRandomMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
-        filters[i] = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
+        results[i] = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
     }
     // preparing params
-    int layersPerThread = LAYERS_NUM / NTHREADS;
+    int rowsPerThread = ROWS_MATRIX / NTHREADS;
+    int spareChange = ROWS_MATRIX % NTHREADS;
+    int spareChangePerThread = (spareChange / NTHREADS) + 1;
+    printf("assigned %d rows per thread\n", rowsPerThread);
+    printf("spare change: %d\n", spareChange);
+    printf("spare changePerThread: %d\n", spareChangePerThread);
+    int index = 0;
     for(i = 0; i < NTHREADS; i++) {
         params[i] = malloc(sizeof(struct parameters));
-        params[i]->startIndex = i * layersPerThread;
-        params[i]->endIndex = (i + 1) * layersPerThread;
+        params[i]->startIndex = index;
+
+        if(spareChange > 0) {
+            params[i]->endIndex = index + rowsPerThread + MIN(spareChangePerThread, spareChange);
+            spareChange -= MIN(spareChangePerThread, spareChange);
+        }
+        else {
+            params[i]->endIndex = index + rowsPerThread;
+        }
+        index = params[i]->endIndex;
+
+        printf("start: %d, end: %d\trows: %d\n", params[i]->startIndex, params[i]->endIndex, params[i]->endIndex - params[i]->startIndex);
     }
 
 
     // computation phase
+    printf("\n");
+    printf("\n");
     printf("starting computations\n");
     QueryPerformanceCounter(&start);
     for(i = 0; i < NTHREADS; i++) {
@@ -168,8 +171,8 @@ int main(void) {
     // releasing memory
     for(i = 0; i < LAYERS_NUM; i++) {
         uninitializeMatrix(matrices[i], ROWS_MATRIX, COLUMNS_MATRIX);
-        uninitializeMatrix(filters[i], ROWS_FILTER, COLUMNS_FILTER);
     }
+    uninitializeMatrix(filter, ROWS_FILTER, COLUMNS_FILTER);
 
     //printMatrix(result, ROWS_MATRIX, COLUMNS_MATRIX);
     return 0;
