@@ -12,7 +12,8 @@
 
 #define LAYERS_NUM 3    // rgb layers
 
-#define NTHREADS 1
+#define NTHREADS 10
+#define DEBUG 0
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
@@ -108,7 +109,7 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     return 0;
 }
 
-int main(void) {
+double experiment(uint8_t nThreads, uint8_t debug) {
     LARGE_INTEGER start, end, freq;
     QueryPerformanceFrequency(&freq);
 
@@ -116,24 +117,28 @@ int main(void) {
     matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
     filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
     results = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    HANDLE threads[NTHREADS];
-    struct parameters* params[NTHREADS];
+    HANDLE threads[nThreads];
+    struct parameters* params[nThreads];
 
     // generation phase
-    printf("generating layers\n");
+    if(debug) {
+        printf("generating layers\n");
+    }
     for(i = 0; i < LAYERS_NUM; i++) {
         matrices[i] = generateRandomMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
         results[i] = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
     }
     // preparing params
-    int rowsPerThread = ROWS_MATRIX / NTHREADS;
-    int spareChange = ROWS_MATRIX % NTHREADS;
-    int spareChangePerThread = (spareChange / NTHREADS) + 1;
-    printf("assigned %d rows per thread\n", rowsPerThread);
-    printf("spare change: %d\n", spareChange);
-    printf("spare changePerThread: %d\n", spareChangePerThread);
+    int rowsPerThread = ROWS_MATRIX / nThreads;
+    int spareChange = ROWS_MATRIX % nThreads;
+    int spareChangePerThread = (spareChange / nThreads) + 1;
+    if(debug) {
+        printf("assigned %d rows per thread\n", rowsPerThread);
+        printf("spare change: %d\n", spareChange);
+        printf("spare changePerThread: %d\n", spareChangePerThread);
+    }
     int index = 0;
-    for(i = 0; i < NTHREADS; i++) {
+    for(i = 0; i < nThreads; i++) {
         params[i] = malloc(sizeof(struct parameters));
         params[i]->startIndex = index;
 
@@ -146,25 +151,33 @@ int main(void) {
         }
         index = params[i]->endIndex;
 
-        printf("start: %d, end: %d\trows: %d\n", params[i]->startIndex, params[i]->endIndex, params[i]->endIndex - params[i]->startIndex);
+        if(debug) {
+            printf("start: %d, end: %d\trows: %d\n", params[i]->startIndex, params[i]->endIndex, params[i]->endIndex - params[i]->startIndex);
+        }
     }
 
 
     // computation phase
-    printf("\n");
-    printf("\n");
-    printf("starting computations\n");
+    if(debug) {
+        printf("\n");
+        printf("\n");
+        printf("starting computations\n");
+    }
+
     QueryPerformanceCounter(&start);
-    for(i = 0; i < NTHREADS; i++) {
+    for(i = 0; i < nThreads; i++) {
         threads[i] = CreateThread(NULL, 0, threadFun, params[i], 0, NULL);
     }
-    WaitForMultipleObjects(NTHREADS, threads, TRUE, INFINITE);
+    WaitForMultipleObjects(nThreads, threads, TRUE, INFINITE);
     QueryPerformanceCounter(&end);
-    printf("ended computations\n");
-    double elapsedTime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
-    printf("execution time: %.3f ms\n", elapsedTime);
 
-    for(i = 0; i < NTHREADS; i++) {
+    double elapsedTime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
+    if(debug) {
+        printf("ended computations\n");
+        printf("execution time: %.3f ms\n", elapsedTime);
+    }
+
+    for(i = 0; i < nThreads; i++) {
         CloseHandle(threads[i]);
     }
 
@@ -174,6 +187,15 @@ int main(void) {
     }
     uninitializeMatrix(filter, ROWS_FILTER, COLUMNS_FILTER);
 
-    //printMatrix(result, ROWS_MATRIX, COLUMNS_MATRIX);
+    return elapsedTime;
+}
+
+int main() {
+    uint8_t i;
+
+    for(i = 1; i <= NTHREADS; i++) {
+        double result = experiment(i, DEBUG);
+        printf("%d threads: %.3f ms\n", i, result);
+    }
     return 0;
 }
