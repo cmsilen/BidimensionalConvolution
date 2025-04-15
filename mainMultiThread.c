@@ -12,7 +12,7 @@
 
 #define LAYERS_NUM 3    // rgb layers
 
-#define NTHREADS 10
+#define NTHREADS 40
 #define DEBUG 0
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
@@ -192,10 +192,18 @@ double experiment(uint8_t nThreads, uint8_t debug) {
 
 int main() {
     uint8_t i;
+    double results[NTHREADS];
 
     for(i = 1; i <= NTHREADS; i++) {
-        double result = experiment(i, DEBUG);
-        printf("%d threads: %.3f ms\n", i, result);
+        results[i - 1] = experiment(i, DEBUG);
+        printf("%d threads: %.3f ms\n", i, results[i - 1]);
     }
+
+    FILE* file = fopen("results.csv", "w");
+    fprintf(file, "nThreads;executionTime\n");
+    for(i = 0; i < NTHREADS; i++) {
+        fprintf(file, "%d;%.3f\n", i + 1, results[i]);
+    }
+    fclose(file);
     return 0;
 }
