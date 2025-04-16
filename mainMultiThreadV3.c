@@ -10,7 +10,7 @@
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-#define N_IMGS 5
+#define N_IMGS 10
 #define LAYERS_NUM 3 * N_IMGS    // rgb layers
 
 #define NTHREADS 40
@@ -87,8 +87,8 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
     if(y == COLUMNS_MATRIX - 1) endY = COLUMNS_FILTER - 1;
 
     int k = x - 1 + startX;
-    int h = y - 1 + startY;
     for (i = startX; i < endX; i++) {
+    	int h = y - 1 + startY;
         for (j = startY; j < endY; j++) {
             result += matrix[k][h] * filter[i][j];
             h++;
