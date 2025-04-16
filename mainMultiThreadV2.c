@@ -10,7 +10,7 @@
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-#define N_IMGS 5
+#define N_IMGS 10
 #define LAYERS_NUM 3 * N_IMGS    // rgb layers
 
 #define NTHREADS 40
@@ -77,10 +77,15 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
     uint16_t i, j;
 
     for (i = 0; i < ROWS_FILTER; i++) {
+        int k = x - 1 + i;
+        if (k < 0 || k >= ROWS_MATRIX)
+            continue;
+
         for (j = 0; j < COLUMNS_FILTER; j++) {
-            if (x - 1 + i < 0 || x - 1 + i >= ROWS_MATRIX || y - 1 + j < 0 || y - 1 + j >= COLUMNS_MATRIX)
+            int h = y - 1 + j;
+            if (h < 0 || h >= COLUMNS_MATRIX)
                 continue;
-            result += matrix[x - 1 + i][y - 1 + j] * filter[i][j];
+            result += matrix[k][h] * filter[i][j];
         }
     }
     return result;
@@ -211,7 +216,7 @@ int main(int argc, char *argv[]) {
 
 
     FILE* file;
-    char filename[100] = "results/executionTime";
+    char filename[100] = "resultsV2/executionTime";
     concatStringNumber(filename, N_IMGS);
     strcat(filename, ".csv\0");
     file = fopen(filename, "w");

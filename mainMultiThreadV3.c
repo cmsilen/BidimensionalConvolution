@@ -18,15 +18,15 @@
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    int16_t** matrix = malloc(sizeof(int16_t**) * rows);
+    int16_t* mem = malloc(sizeof(uint16_t*) * rows * cols);
     
     if (rows == 0 || cols == 0) {
         return 0;
     }
 
-    matrix = malloc(sizeof(uint16_t*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(uint16_t*) * cols);
+        matrix[i] = (mem + (i * cols) * sizeof(uint16_t));
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -76,12 +76,24 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
     int16_t result = 0;
     uint16_t i, j;
 
-    for (i = 0; i < ROWS_FILTER; i++) {
-        for (j = 0; j < COLUMNS_FILTER; j++) {
-            if (x - 1 + i < 0 || x - 1 + i >= ROWS_MATRIX || y - 1 + j < 0 || y - 1 + j >= COLUMNS_MATRIX)
-                continue;
-            result += matrix[x - 1 + i][y - 1 + j] * filter[i][j];
+    uint16_t startX = 0;
+    uint16_t startY = 0;
+    if(x == 0) startX = 1;
+    if(y == 0) startY = 1;
+
+    uint16_t endX = ROWS_FILTER;
+    uint16_t endY = COLUMNS_FILTER;
+    if(x == ROWS_MATRIX - 1) endX = ROWS_FILTER - 1;
+    if(y == COLUMNS_MATRIX - 1) endY = COLUMNS_FILTER - 1;
+
+    int k = x - 1 + startX;
+    int h = y - 1 + startY;
+    for (i = startX; i < endX; i++) {
+        for (j = startY; j < endY; j++) {
+            result += matrix[k][h] * filter[i][j];
+            h++;
         }
+        k++;
     }
     return result;
 }
@@ -205,13 +217,15 @@ int main(int argc, char *argv[]) {
 
     // releasing memory
     for(i = 0; i < LAYERS_NUM; i++) {
-        uninitializeMatrix(matrices[i], ROWS_MATRIX, COLUMNS_MATRIX);
+        free(matrices[i][0]);
+        free(matrices[i]);
     }
-    uninitializeMatrix(filter, ROWS_FILTER, COLUMNS_FILTER);
+    free(filter[0]);
+    free(filter);
 
 
     FILE* file;
-    char filename[100] = "results/executionTime";
+    char filename[100] = "resultsV3/executionTime";
     concatStringNumber(filename, N_IMGS);
     strcat(filename, ".csv\0");
     file = fopen(filename, "w");
