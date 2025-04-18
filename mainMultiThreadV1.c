@@ -10,7 +10,7 @@
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-#define N_IMGS 5
+#define N_IMGS 20
 #define LAYERS_NUM 3 * N_IMGS    // rgb layers
 
 #define NTHREADS 40
@@ -211,7 +211,7 @@ int main(int argc, char *argv[]) {
 
 
     FILE* file;
-    char filename[100] = "results/executionTime";
+    char filename[100] = "resultsV1/executionTime";
     concatStringNumber(filename, N_IMGS);
     strcat(filename, ".csv\0");
     file = fopen(filename, "w");

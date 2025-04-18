@@ -10,7 +10,7 @@
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-#define N_IMGS 10
+#define N_IMGS 20
 #define LAYERS_NUM 3 * N_IMGS    // rgb layers
 
 #define NTHREADS 40
