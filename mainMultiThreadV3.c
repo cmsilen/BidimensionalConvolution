@@ -26,7 +26,7 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     }
 
     for(i = 0; i < rows; i++) {
-        matrix[i] = (mem + (i * cols) * sizeof(uint16_t));
+        matrix[i] = (mem + (i * cols));
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }

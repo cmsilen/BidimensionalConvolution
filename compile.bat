@@ -13,6 +13,6 @@ REM Costruisce il nome del file
 set FILE=mainMultiThreadV%NUM%.c
 
 REM Compila con gcc
-gcc -g -O0 -fno-omit-frame-pointer -o main %FILE%
+gcc -g -O0 -fno-omit-frame-pointer -m64 -o main %FILE%
 
 :fine
