@@ -2,12 +2,13 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <windows.h>
+
 #define ROWS_MATRIX 3840
 #define COLUMNS_MATRIX 2160
 #define ROWS_FILTER 3
 #define COLUMNS_FILTER 3
-#define MAX_NUMBER 5
-#define MIN_NUMBER -5
+#define MAX_NUMBER 255  // massimo per uint8_t
+#define MIN_NUMBER 0    // minimo per uint8_t
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 #define N_IMGS 20
@@ -16,10 +17,10 @@
 #define NTHREADS 40
 #define DEBUG 0
 
-int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
+uint8_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix = malloc(sizeof(int16_t**) * rows);
-    int16_t* mem = malloc(sizeof(uint16_t*) * rows * cols);
+    uint8_t** matrix = malloc(sizeof(uint8_t*) * rows);
+    uint8_t* mem = malloc(sizeof(uint8_t) * rows * cols);
 
     if (rows == 0 || cols == 0) {
         return 0;
@@ -34,8 +35,8 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-void uninitializeMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
-    uint16_t i, j = 0;
+void uninitializeMatrix(uint8_t** matrix, uint16_t rows, uint16_t cols) {
+    uint16_t i;
 
     if (rows == 0 || cols == 0) {
         return;
@@ -48,16 +49,14 @@ void uninitializeMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
 }
 
 int16_t g_seed = 10;
-int16_t randomNumber(int16_t min, int16_t max) {
-    g_seed = (214013*g_seed+2531011);
-    return ((g_seed>>16)&0x7FFF) % (max - min + 1) + min;
-
-    //return rand() % (max - min + 1) + min;
+uint8_t randomNumber(uint8_t min, uint8_t max) {
+    g_seed = (214013 * g_seed + 2531011);
+    return ((g_seed >> 16) & 0x7FFF) % (max - min + 1) + min;
 }
 
-int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
+uint8_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    uint8_t** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
@@ -72,8 +71,8 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
-    int16_t result = 0;
+uint8_t applyFilter(uint8_t** matrix, uint16_t x, uint16_t y, uint8_t** filter) {
+    uint8_t result = 0;
     uint16_t i, j;
 
     uint16_t startX = 0;
@@ -88,7 +87,7 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
 
     int k = x - 1 + startX;
     for (i = startX; i < endX; i++) {
-    	int h = y - 1 + startY;
+        int h = y - 1 + startY;
         for (j = startY; j < endY; j++) {
             result += matrix[k][h] * filter[i][j];
             h++;
@@ -103,10 +102,9 @@ struct parameters {
     uint16_t endIndex;
 };
 
-int16_t*** matrices;
-int16_t** filter;
-int16_t*** results;
-
+uint8_t*** matrices;
+uint8_t** filter;
+uint8_t*** results;
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
@@ -114,6 +112,8 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
+            __builtin_prefetch(matrices[i][j], 0, 3); // Pre-carica i dati
+            __builtin_prefetch(filter, 0, 3); // Pre-carica i dati
             for(k = 0; k < COLUMNS_MATRIX; k++) {
                 results[i][j][k] = applyFilter(matrices[i], j, k, filter);
             }
@@ -129,7 +129,6 @@ double experiment(uint8_t nThreads, uint8_t debug) {
     uint16_t i;
     HANDLE threads[nThreads];
     struct parameters* params[nThreads];
-
 
     // preparing params
     int rowsPerThread = ROWS_MATRIX / nThreads;
@@ -159,12 +158,9 @@ double experiment(uint8_t nThreads, uint8_t debug) {
         }
     }
 
-
     // computation phase
     if(debug) {
-        printf("\n");
-        printf("\n");
-        printf("starting computations\n");
+        printf("\nstarting computations\n");
     }
 
     QueryPerformanceCounter(&start);
@@ -196,9 +192,10 @@ void concatStringNumber(char *str, int numero) {
 
 int main(int argc, char *argv[]) {
     uint8_t i;
-    matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
+    matrices = malloc(sizeof(uint8_t**) * LAYERS_NUM);
     filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
-    results = malloc(sizeof(int16_t**) * LAYERS_NUM);
+    results = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+
     // generation phase
     if(DEBUG) {
         printf("generating layers\n");
@@ -217,15 +214,12 @@ int main(int argc, char *argv[]) {
 
     // releasing memory
     for(i = 0; i < LAYERS_NUM; i++) {
-        free(matrices[i][0]);
         free(matrices[i]);
     }
-    free(filter[0]);
     free(filter);
 
-
     FILE* file;
-    char filename[100] = "resultsV3/executionTime";
+    char filename[100] = "resultsV4/executionTime";
     concatStringNumber(filename, N_IMGS);
     strcat(filename, ".csv\0");
     file = fopen(filename, "w");
