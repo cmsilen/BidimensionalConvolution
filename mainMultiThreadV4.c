@@ -100,6 +100,7 @@ uint8_t applyFilter(uint8_t** matrix, uint16_t x, uint16_t y, uint8_t** filter) 
 struct parameters {
     uint16_t startIndex;
     uint16_t endIndex;
+    uint8_t threadIndex;
 };
 
 uint8_t*** matrices;
@@ -109,6 +110,8 @@ uint8_t*** results;
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
+
+    SetThreadPriority(GetCurrentThread(), REALTIME_PRIORITY_CLASS);
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
@@ -152,6 +155,8 @@ double experiment(uint8_t nThreads, uint8_t debug) {
             params[i]->endIndex = index + rowsPerThread;
         }
         index = params[i]->endIndex;
+
+        params[i]->threadIndex = i;
 
         if(debug) {
             printf("start: %d, end: %d\trows: %d\n", params[i]->startIndex, params[i]->endIndex, params[i]->endIndex - params[i]->startIndex);
@@ -210,6 +215,7 @@ int main(int argc, char *argv[]) {
     for(i = 1; i <= NTHREADS; i++) {
         resultExTime[i - 1] = experiment(i, DEBUG);
         printf("%d threads: %.3f ms\n", i, resultExTime[i - 1]);
+        Sleep(5000);
     }
 
     // releasing memory
