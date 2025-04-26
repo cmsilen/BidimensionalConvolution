@@ -99,8 +99,6 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
-            __builtin_prefetch(matrices[i][j], 0, 3); // Pre-carica i dati
-            __builtin_prefetch(filter, 0, 3); // Pre-carica i dati
             for(k = 0; k < COLUMNS_MATRIX; k++) {
                 results[i][j][k] = applyFilter(matrices[i], j, k, filter);
             }
@@ -109,4 +107,4 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     return 0;
 }
 ```
-__builtin_prefetch per suggerire al processore di caricare in cache i dati puntati ed assegnazione priorità real time.
+assegnazione priorità real time.

@@ -115,8 +115,6 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
-            __builtin_prefetch(matrices[i][j], 0, 3); // Pre-carica i dati
-            __builtin_prefetch(filter, 0, 3); // Pre-carica i dati
             for(k = 0; k < COLUMNS_MATRIX; k++) {
                 results[i][j][k] = applyFilter(matrices[i], j, k, filter);
             }
@@ -212,6 +210,8 @@ int main(int argc, char *argv[]) {
 
     double resultExTime[NTHREADS];
 
+    printf("%d threads: %.3f ms\n", 32, experiment(32, 0));
+    return 0;
     for(i = 1; i <= NTHREADS; i++) {
         resultExTime[i - 1] = experiment(i, DEBUG);
         printf("%d threads: %.3f ms\n", i, resultExTime[i - 1]);
