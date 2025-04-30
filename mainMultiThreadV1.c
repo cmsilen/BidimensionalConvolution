@@ -10,11 +10,9 @@
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
-#define N_IMGS 20
-#define LAYERS_NUM 3 * N_IMGS    // rgb layers
-
-#define NTHREADS 40
 #define DEBUG 0
+
+uint16_t LAYERS_NUM;
 
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
@@ -183,43 +181,45 @@ void concatStringNumber(char *str, int numero) {
 }
 
 int main(int argc, char *argv[]) {
-    uint8_t i;
-    matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
-    results = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    // generation phase
-    if(DEBUG) {
-        printf("generating layers\n");
+    // Verifica che siano stati forniti due argomenti
+    if (argc != 3) {
+        printf("./main <N_THREADS> <N_IMGS>\n");
+        return 1; // Esce con codice di errore
     }
+
+    // Converte gli argomenti in interi
+    int NThread = atoi(argv[1]);
+    int NImgs = atoi(argv[2]);
+    LAYERS_NUM = NImgs * 3;
+
+    uint8_t i;
+    matrices = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+    filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    results = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+
+    // generation phase
     for(i = 0; i < LAYERS_NUM; i++) {
         matrices[i] = generateRandomMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
         results[i] = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
     }
 
-    double resultExTime[NTHREADS];
+    double resultExTime = experiment(NThread, DEBUG);
 
-    for(i = 1; i <= NTHREADS; i++) {
-        resultExTime[i - 1] = experiment(i, DEBUG);
-        printf("%d threads: %.3f ms\n", i, resultExTime[i - 1]);
-    }
+    printf("%d threads, %d imgs: %.3f ms\n", NThread, NImgs, resultExTime);
 
     // releasing memory
     for(i = 0; i < LAYERS_NUM; i++) {
-        uninitializeMatrix(matrices[i], ROWS_MATRIX, COLUMNS_MATRIX);
+        free(matrices[i]);
     }
-    uninitializeMatrix(filter, ROWS_FILTER, COLUMNS_FILTER);
-
+    free(filter);
 
     FILE* file;
     char filename[100] = "resultsV1/executionTime";
-    concatStringNumber(filename, N_IMGS);
-    strcat(filename, ".csv\0");
-    file = fopen(filename, "w");
-    fprintf(file, "nThreads;executionTime\n");
+    concatStringNumber(filename, NImgs);
+    strcat(filename, "IMGS.csv\0");
+    file = fopen(filename, "a");
 
-    for(i = 0; i < NTHREADS; i++) {
-        fprintf(file, "%d;%.3f\n", i + 1, resultExTime[i]);
-    }
+    fprintf(file, "%d;%.3f\n", NThread, resultExTime);
     fclose(file);
     return 0;
 }
