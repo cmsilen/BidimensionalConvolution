@@ -109,7 +109,7 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
 
-    SetThreadPriority(GetCurrentThread(), REALTIME_PRIORITY_CLASS);
+    //SetThreadPriority(GetCurrentThread(), REALTIME_PRIORITY_CLASS);
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
@@ -223,6 +223,7 @@ int main(int argc, char *argv[]) {
         free(matrices[i]);
     }
     free(filter);
+return 0;
 
     FILE* file;
     char filename[100] = "resultsV4/executionTime";

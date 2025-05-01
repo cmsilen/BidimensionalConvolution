@@ -4,8 +4,8 @@
 #include <windows.h>
 #define ROWS_MATRIX 3840
 #define COLUMNS_MATRIX 2160
-#define ROWS_FILTER 3
-#define COLUMNS_FILTER 3
+#define ROWS_FILTER 19
+#define COLUMNS_FILTER 19
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -75,12 +75,12 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
     uint16_t i, j;
 
     for (i = 0; i < ROWS_FILTER; i++) {
-        int k = x - 1 + i;
+        int k = x - (ROWS_FILTER / 2) + i;
         if (k < 0 || k >= ROWS_MATRIX)
             continue;
 
         for (j = 0; j < COLUMNS_FILTER; j++) {
-            int h = y - 1 + j;
+            int h = y - (COLUMNS_FILTER / 2) + j;
             if (h < 0 || h >= COLUMNS_MATRIX)
                 continue;
             result += matrix[k][h] * filter[i][j];
@@ -217,7 +217,7 @@ int main(int argc, char *argv[]) {
         free(matrices[i]);
     }
     free(filter);
-
+    return 0;
     FILE* file;
     char filename[100] = "resultsV2/executionTime";
     concatStringNumber(filename, NImgs);

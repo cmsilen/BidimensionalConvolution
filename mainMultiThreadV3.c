@@ -224,6 +224,7 @@ int main(int argc, char *argv[]) {
         free(matrices[i]);
     }
     free(filter);
+return 0;
 
     FILE* file;
     char filename[100] = "resultsV3/executionTime";
