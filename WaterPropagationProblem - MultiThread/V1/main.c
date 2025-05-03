@@ -155,8 +155,8 @@ int main(int argc, char *argv[])
         params[i].ey = end_linear_coordinate / COLUMNS_TERRAIN;
         
         // Assign Debug
-        printf("Thread n%d -> Start: %d | End: %d\n", i, start_linear_coordinate, end_linear_coordinate);
-        printf("sx: %d | sy: %d | ex: %d | ey: %d\n", params[i].sx, params[i].sy, params[i].ex, params[i].ey);
+        //printf("Thread n%d -> Start: %d | End: %d\n", i, start_linear_coordinate, end_linear_coordinate);
+        //printf("sx: %d | sy: %d | ex: %d | ey: %d\n", params[i].sx, params[i].sy, params[i].ex, params[i].ey);
     }
 
     // Compute
