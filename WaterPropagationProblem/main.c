@@ -133,6 +133,7 @@ int main(int argc, char *argv[])
     
     // END
     freeList(list[4]);
+    uninitializeTerrain(terrain);
 }
 
 void placeSource(uint8_t* terrain, Node** cellList, uint16_t x, uint16_t y)
