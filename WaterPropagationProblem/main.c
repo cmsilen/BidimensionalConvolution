@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
     Node** list = malloc(sizeof(Node*) * ROWS_TERRAIN * COLUMNS_TERRAIN);
 
     // Show terrain map
-    printTerrain(terrain);
+    //printTerrain(terrain);
 
     // Compute
     LARGE_INTEGER start, end, freq;
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
     printf("execution time: %.3f ms\n", elapsedTime);
     
     // Print all terrain maps
-    printf("\n");
+    /*printf("\n");
     for(uint16_t y = 0; y < ROWS_TERRAIN; y++) 
     {
         for(uint16_t x = 0; x < COLUMNS_TERRAIN; x++) 
@@ -129,7 +129,7 @@ int main(int argc, char *argv[])
             printFloodedTerrain(terrain, list, x, y);
             printf("\n");
         }
-    }
+    }*/
     
     // END
     freeList(list[4]);
