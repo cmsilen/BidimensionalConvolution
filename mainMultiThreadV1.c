@@ -2,18 +2,24 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <math.h>
+#include <locale.h>
+
+#define SIGMA_MAX 5
 #define ROWS_MATRIX 3840
 #define COLUMNS_MATRIX 2160
-#define ROWS_FILTER 19
-#define COLUMNS_FILTER 19
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 #define DEBUG 0
 
+uint16_t ROWS_FILTER;
+uint16_t COLUMNS_FILTER;
 uint16_t LAYERS_NUM;
 
+
+// ------------------------ UTILITY ------------------------ //
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
     int16_t** matrix;
@@ -22,9 +28,9 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
         return 0;
     }
 
-    matrix = malloc(sizeof(uint16_t*) * rows);
+    matrix = malloc(sizeof(int16_t*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(uint16_t*) * cols);
+        matrix[i] = malloc(sizeof(int16_t*) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -42,6 +48,7 @@ void uninitializeMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
     for(i = 0; i < rows; i++) {
         free(matrix[i]);
     }
+    free(matrix);
     return;
 }
 
@@ -69,6 +76,30 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     }
     return matrix;
 }
+// ---------------------------------------------------------- //
+
+int16_t** depthMap;
+
+// depends on sigma and the coords of the filter
+double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
+    int16_t denominator = 2 * M_PI * sigma * sigma;
+    int16_t exponent = -(i * i + j * j) / (2 * sigma * sigma);
+    return (1.0 / denominator) * exp(exponent);
+}
+
+// depends on the coords of the matrix
+double sigmaFunction(uint16_t i, uint16_t j) {
+    return depthMap[i][j] * SIGMA_MAX;
+}
+
+// to compute the filter given the coords of the matrix
+void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
+    for (uint16_t i = 0; i < ROWS_FILTER; i++) {
+        for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
+            filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
+        }
+    }
+}
 
 int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
     int16_t result = 0;
@@ -79,7 +110,7 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
             if (x - (ROWS_FILTER / 2) + i < 0 || x - (ROWS_FILTER / 2) + i >= ROWS_MATRIX ||
                 y - (COLUMNS_FILTER / 2) + j < 0 || y - (COLUMNS_FILTER / 2) + j >= COLUMNS_MATRIX)
                 continue;
-            result += matrix[x - (ROWS_FILTER / 2) + i][y - (COLUMNS_FILTER / 2)] * filter[i][j];
+            result += matrix[x - (ROWS_FILTER / 2) + i][y - (COLUMNS_FILTER / 2) + j] * filter[i][j];
         }
     }
     return result;
@@ -91,7 +122,6 @@ struct parameters {
 };
 
 int16_t*** matrices;
-int16_t** filter;
 int16_t*** results;
 
 
@@ -99,13 +129,18 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
 
+    int16_t** filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
+
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
-            for(k = 0; k < COLUMNS_MATRIX; k++) {
-                results[i][j][k] = applyFilter(matrices[i], j, k, filter);
+            for(k = 0; k < ROWS_MATRIX; k++) {
+                computeFilter(filter, k, j);
+                results[i][k][j] = applyFilter(matrices[i], k, j, filter);
             }
         }
     }
+
+    free(filter);
     return 0;
 }
 
@@ -119,11 +154,11 @@ double experiment(uint8_t nThreads, uint8_t debug) {
 
 
     // preparing params
-    int rowsPerThread = ROWS_MATRIX / nThreads;
-    int spareChange = ROWS_MATRIX % nThreads;
+    int colsPerThread = COLUMNS_MATRIX / nThreads;
+    int spareChange = COLUMNS_MATRIX % nThreads;
     int spareChangePerThread = (spareChange / nThreads) + 1;
     if(debug) {
-        printf("assigned %d rows per thread\n", rowsPerThread);
+        printf("assigned %d cols per thread\n", colsPerThread);
         printf("spare change: %d\n", spareChange);
         printf("spare changePerThread: %d\n", spareChangePerThread);
     }
@@ -133,11 +168,11 @@ double experiment(uint8_t nThreads, uint8_t debug) {
         params[i]->startIndex = index;
 
         if(spareChange > 0) {
-            params[i]->endIndex = index + rowsPerThread + MIN(spareChangePerThread, spareChange);
+            params[i]->endIndex = index + colsPerThread + MIN(spareChangePerThread, spareChange);
             spareChange -= MIN(spareChangePerThread, spareChange);
         }
         else {
-            params[i]->endIndex = index + rowsPerThread;
+            params[i]->endIndex = index + colsPerThread;
         }
         index = params[i]->endIndex;
 
@@ -183,20 +218,24 @@ void concatStringNumber(char *str, int numero) {
 
 int main(int argc, char *argv[]) {
     // Verifica che siano stati forniti due argomenti
-    if (argc != 3) {
-        printf("./main <N_THREADS> <N_IMGS>\n");
+    if (argc != 6) {
+        printf("./main <N_THREADS> <N_IMGS> <ROWS_FILTER> <isScalability> <saveData>\n");
         return 1; // Esce con codice di errore
     }
 
     // Converte gli argomenti in interi
     int NThread = atoi(argv[1]);
     int NImgs = atoi(argv[2]);
+	ROWS_FILTER = atoi(argv[3]);
+	COLUMNS_FILTER = ROWS_FILTER;
+	int isScalability = atoi(argv[4]);
     LAYERS_NUM = NImgs * 3;
+    int saveData = atoi(argv[5]);
 
     uint8_t i;
-    matrices = malloc(sizeof(uint8_t**) * LAYERS_NUM);
-    filter = generateRandomMatrix(ROWS_FILTER, COLUMNS_FILTER);
-    results = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+    matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
+    results = malloc(sizeof(int16_t**) * LAYERS_NUM);
+    depthMap = generateRandomMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
 
     // generation phase
     for(i = 0; i < LAYERS_NUM; i++) {
@@ -206,21 +245,53 @@ int main(int argc, char *argv[]) {
 
     double resultExTime = experiment(NThread, DEBUG);
 
-    printf("%d threads, %d imgs: %.3f ms\n", NThread, NImgs, resultExTime);
+    printf("%d threads, %d imgs, %u filter: %.3f ms\n", NThread, NImgs, ROWS_FILTER, resultExTime);
 
     // releasing memory
+    uninitializeMatrix(depthMap, ROWS_MATRIX, COLUMNS_MATRIX);
     for(i = 0; i < LAYERS_NUM; i++) {
         free(matrices[i]);
     }
-    free(filter);
-return 0;
-    FILE* file;
-    char filename[100] = "resultsV1/executionTime";
+
+    if(!saveData) {
+        return 0;
+    }
+
+    if(setlocale(LC_NUMERIC, "Italian_Italy.1252") == NULL) {
+        printf("Failed to set locale\n");
+        return 1;
+    }
+
+	if(isScalability > 0) {
+		FILE* file = fopen("resultsV1/scalability.csv", "r");
+	    int exists = file != NULL;
+	    fclose(file);
+    	char filename[100] = "resultsV1/scalability.csv";
+    	file = fopen(filename, "a");
+
+	    if(exists == 0) {
+	        fprintf(file, "RowsFilter;executionTime\n");
+	    }
+
+    	fprintf(file, "%u;%.3f\n", ROWS_FILTER, resultExTime);
+    	fclose(file);
+		return 0;
+	}
+
+    char filename[100] = "resultsV1/executionTime_";
     concatStringNumber(filename, NImgs);
     strcat(filename, "IMGS.csv\0");
+    FILE* file = fopen(filename, "r");
+    int exists = file != NULL;
+    fclose(file);
+
     file = fopen(filename, "a");
 
-    fprintf(file, "%d;%.3f\n", NThread, resultExTime);
+    if(exists == 0) {
+        fprintf(file, "Threads;NImgs;RowsFilter;executionTime\n");
+    }
+
+    fprintf(file, "%d;%d;%d;%.3f\n", NThread, NImgs, ROWS_FILTER, resultExTime);
     fclose(file);
     return 0;
 }

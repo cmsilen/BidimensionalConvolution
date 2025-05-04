@@ -16,15 +16,13 @@ REM Compila con gcc
 call compile %~1
 
 
-for /L %%i in (1,1,20) do (
-    for %%j in (1,5,20) do (
-        echo Esecuzione: main %%i threads %%j imgs
-        main %%i %%j 7 0 1
-        main %%i %%j 7 0 1
-        main %%i %%j 7 0 1
-        main %%i %%j 7 0 1
-        main %%i %%j 7 0 1
-    )
+for %%j in (3,5,11,19,29) do (
+    echo Esecuzione: main %%j filter 30 imgs
+    main 16 30 %%j 1 1
+    main 16 30 %%j 1 1
+    main 16 30 %%j 1 1
+    main 16 30 %%j 1 1
+    main 16 30 %%j 1 1
 )
 
 :fine
