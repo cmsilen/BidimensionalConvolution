@@ -86,7 +86,6 @@ uint8_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
 #pragma endregion
 // ---------------------------------------------------------- //
 
-// depends on sigma and the coords of the filter
 uint8_t applyFilter(uint8_t** matrix, uint16_t y, uint16_t x) {
     double num = 0.0, den = 0.0;
 
