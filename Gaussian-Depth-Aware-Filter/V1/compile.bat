@@ -1,0 +1,1 @@
+gcc -g -Og -fno-omit-frame-pointer -m64 -o main main.c
