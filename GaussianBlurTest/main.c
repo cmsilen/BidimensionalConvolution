@@ -5,12 +5,14 @@
 #include <math.h>
 #include <locale.h>
 
-#define SIGMA_MAX 100
+#define SIGMA_S 4.0
+#define SIGMA_D 20.0
+
 #define ROWS_MATRIX 512
 #define COLUMNS_MATRIX 512
 
-uint16_t ROWS_FILTER = 3;
-uint16_t COLUMNS_FILTER = 3;
+uint16_t ROWS_FILTER = 13;
+uint16_t COLUMNS_FILTER = 13;
 
 int16_t** img;
 int16_t** depth;
@@ -23,7 +25,7 @@ int write_pgm(const char* filename, int16_t** out, int width, int height);
 double gaussianBlur(uint16_t i, uint16_t j, double sigma);
 double sigmaFunction(uint16_t i, uint16_t j);
 void computeFilter(int16_t** filter, uint16_t row, uint16_t col);
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter);
+int16_t applyFilter(int16_t** matrix, uint16_t y, uint16_t x);
 
 int main(int argc, char *argv[]) 
 {
@@ -49,52 +51,46 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int16_t** filter = initializeMatrix(ROWS_FILTER, COLUMNS_FILTER);
-
     for(int j = 0; j < 512; j++) {
         for(int k = 0; k < 512; k++) {
-            computeFilter(filter, k, j);
-            out_img[k][j] = applyFilter(img, k, j, filter);
+            out_img[k][j] = applyFilter(img, k, j);
         }
     }
 
     write_pgm("out_img.pgm", out_img, 512, 512);
 }
 
+int16_t applyFilter(int16_t** matrix, uint16_t y, uint16_t x) {
+    double num = 0.0, den = 0.0;
 
-double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
-    int16_t denominator = 2 * M_PI * sigma * sigma;
-    int16_t exponent = -(i * i + j * j) / (2 * sigma * sigma);
-    return (1.0 / denominator) * exp(exponent);
-}
+    int HALF_FILTER_SIZE = ROWS_FILTER/2;
 
-// depends on the coords of the matrix
-double sigmaFunction(uint16_t i, uint16_t j) {
-    return depth[i][j] * SIGMA_MAX;
-}
+    for (int16_t i = -HALF_FILTER_SIZE; i <= HALF_FILTER_SIZE; i++) {
+        for (int16_t j = -HALF_FILTER_SIZE; j <= HALF_FILTER_SIZE; j++) {
+            int32_t ny = y + i;
+            int32_t nx = x + j;
 
-// to compute the filter given the coords of the matrix
-void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
-    for (uint16_t i = 0; i < ROWS_FILTER; i++) {
-        for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
-            filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
+            if (ny >= 0 && ny < ROWS_MATRIX && nx >= 0 && nx < COLUMNS_MATRIX) {
+                uint32_t spatial_dist2 = i*i + j*j;
+                int16_t depth_diff = depth[ny][nx] - depth[y][x];
+                uint16_t depth_diff2 = depth_diff * depth_diff;               
+
+                double weight = exp(-(spatial_dist2 / (2.0 * SIGMA_S * SIGMA_S) + depth_diff2 / (2.0 * SIGMA_D * SIGMA_D)));
+
+                //printf("spatial_dist2: %d | depth_diff: %d | depth_diff2: %d | weight: %f\n", spatial_dist2, depth_diff, depth_diff2, weight);
+
+                num += matrix[ny][nx] * weight;
+                den += weight;
+            }
         }
     }
-}
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
-    int16_t result = 0;
-    uint16_t i, j;
-
-    for (i = 0; i < ROWS_FILTER; i++) {
-        for (j = 0; j < COLUMNS_FILTER; j++) {
-            if (x - (ROWS_FILTER / 2) + i < 0 || x - (ROWS_FILTER / 2) + i >= ROWS_MATRIX ||
-                y - (COLUMNS_FILTER / 2) + j < 0 || y - (COLUMNS_FILTER / 2) + j >= COLUMNS_MATRIX)
-                continue;
-            result += matrix[x - (ROWS_FILTER / 2) + i][y - (COLUMNS_FILTER / 2) + j] * filter[i][j];
-        }
+    if (den > 1e-5) {
+        int result = round(num / den);
+        return (int16_t)(result > 255 ? 255 : result);
     }
-    return result;
+
+    return matrix[y][x];
 }
 
 int read_pgm(const char* filename, int16_t** img, int* width, int* height) {
