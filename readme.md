@@ -32,17 +32,19 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
 
     uint16_t startX = 0;
     uint16_t startY = 0;
-    if(x == 0) startX = 1;
-    if(y == 0) startY = 1;
+    uint16_t HALF_ROW = (ROWS_FILTER / 2);
+    uint16_t HALF_COLUMN = (COLUMNS_FILTER / 2);
+    if(x < HALF_ROW) startX = HALF_ROW - x;
+    if(y < HALF_COLUMN) startY = HALF_COLUMN - y;
 
     uint16_t endX = ROWS_FILTER;
     uint16_t endY = COLUMNS_FILTER;
-    if(x == ROWS_MATRIX - 1) endX = ROWS_FILTER - 1;
-    if(y == COLUMNS_MATRIX - 1) endY = COLUMNS_FILTER - 1;
+    if(x >= ROWS_MATRIX - HALF_ROW) endX = HALF_ROW + (ROWS_MATRIX - x - 1);
+    if(y >= COLUMNS_MATRIX - HALF_COLUMN) endY = HALF_COLUMN + (COLUMNS_MATRIX - y - 1);
 
-    int k = x - 1 + startX;
+    uint16_t k = x - HALF_ROW + startX;
     for (i = startX; i < endX; i++) {
-    	int h = y - 1 + startY;
+        uint16_t h = y - HALF_COLUMN + startY;
         for (j = startY; j < endY; j++) {
             result += matrix[k][h] * filter[i][j];
             h++;
@@ -52,5 +54,5 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
     return result;
 }
 ```
-Si evita di ricalcolare gli indici per più volte per ogni iterazione.
+Si evita di ricalcolare gli indici per più volte per ogni iterazione e rimossi gli if dentro i loop.
 
