@@ -9,8 +9,8 @@
 #define ROWS_MATRIX 512
 #define COLUMNS_MATRIX 512
 
-uint16_t ROWS_FILTER;
-uint16_t COLUMNS_FILTER;
+uint16_t ROWS_FILTER = 3;
+uint16_t COLUMNS_FILTER = 3;
 
 int16_t** img;
 int16_t** depth;
@@ -82,40 +82,7 @@ void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
     }
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t y, uint16_t x, int16_t** filter) {
-    double num = 0.0, den = 0.0;
-
-    int HALF_FILTER_SIZE = ROWS_FILTER/2;
-
-    for (int16_t i = -HALF_FILTER_SIZE; i <= HALF_FILTER_SIZE; i++) {
-        for (int16_t j = -HALF_FILTER_SIZE; j <= HALF_FILTER_SIZE; j++) {
-            int32_t ny = y + i;
-            int32_t nx = x + j;
-
-            if (ny >= 0 && ny < ROWS_MATRIX && nx >= 0 && nx < COLUMNS_MATRIX) {
-                uint32_t spatial_dist2 = i*i + j*j;
-                int16_t depth_diff = depth[ny][nx] - depth[y][x];
-                uint16_t depth_diff2 = depth_diff * depth_diff;               
-
-                double weight = exp(-(spatial_dist2 / (2.0 * SIGMA_S * SIGMA_S) + depth_diff2 / (2.0 * SIGMA_D * SIGMA_D)));
-
-                //printf("spatial_dist2: %d | depth_diff: %d | depth_diff2: %d | weight: %f\n", spatial_dist2, depth_diff, depth_diff2, weight);
-
-                num += matrix[ny][nx] * weight;
-                den += weight;
-            }
-        }
-    }
-
-    if (den > 1e-5) {
-        int result = round(num / den);
-        return (int16_t)(result > 255 ? 255 : result);
-    }
-
-    return matrix[y][x];
-}
-
-/*int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
+int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
     int16_t result = 0;
     uint16_t i, j;
 
@@ -128,7 +95,7 @@ int16_t applyFilter(int16_t** matrix, uint16_t y, uint16_t x, int16_t** filter) 
         }
     }
     return result;
-}*/
+}
 
 int read_pgm(const char* filename, int16_t** img, int* width, int* height) {
     FILE* file = fopen(filename, "r");
