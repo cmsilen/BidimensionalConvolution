@@ -13,11 +13,7 @@ REM Costruisce il nome del file
 set FILE=mainMultiThreadV%NUM%.c
 
 REM Compila con gcc
-IF "%~1"=="3" (
-    echo compilazione con prefetch degli array nei loop
-    gcc -g -Og -fprefetch-loop-arrays -fno-omit-frame-pointer -m64 -o main %FILE%
-    goto fine
-)
+
 IF "%~1"=="4" (
     echo compilazione con priorità massima
     gcc -g -O3 -fprefetch-loop-arrays -flto -funroll-loops -fno-omit-frame-pointer -m64 -o main %FILE%
