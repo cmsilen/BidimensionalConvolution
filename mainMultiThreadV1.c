@@ -23,7 +23,7 @@ uint16_t LAYERS_NUM;
 int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
     int16_t** matrix;
-    
+
     if (rows == 0 || cols == 0) {
         return 0;
     }
@@ -40,7 +40,7 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
 
 void uninitializeMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    
+
     if (rows == 0 || cols == 0) {
         return;
     }
@@ -56,14 +56,14 @@ int16_t g_seed = 10;
 int16_t randomNumber(int16_t min, int16_t max) {
     g_seed = (214013*g_seed+2531011);
     return ((g_seed>>16)&0x7FFF) % (max - min + 1) + min;
-    
+
     //return rand() % (max - min + 1) + min;
 }
 
 int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
     int16_t** matrix;
-    
+
     if (rows == 0 || cols == 0) {
         return 0;
     }

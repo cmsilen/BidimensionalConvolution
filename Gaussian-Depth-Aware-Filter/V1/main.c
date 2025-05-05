@@ -8,8 +8,8 @@
 #define SIGMA_S 4.0
 #define SIGMA_D 20.0
 
-#define ROWS_MATRIX 16
-#define COLUMNS_MATRIX 16
+#define ROWS_MATRIX 3840
+#define COLUMNS_MATRIX 2160
 #define MAX_NUMBER 254
 #define MIN_NUMBER 0
 #define MIN(a,b) (((a)<(b))?(a):(b))
