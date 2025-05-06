@@ -14,9 +14,9 @@ set FILE=mainMultiThreadV%NUM%.c
 
 REM Compila con gcc
 
-IF "%~1"=="4" (
+IF "%~1"=="5" (
     echo compilazione con ottimizzazioni matematiche
-    gcc -g3 -Og -fno-omit-frame-pointer -m64 -o main %FILE%
+    gcc -g3 -O3 -ffast-math -march=native -fno-omit-frame-pointer -m64 -o main %FILE%
     goto fine
 )
 
