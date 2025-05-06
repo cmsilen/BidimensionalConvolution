@@ -16,10 +16,10 @@ REM Compila con gcc
 
 IF "%~1"=="4" (
     echo compilazione con ottimizzazioni matematiche
-    gcc -g -Og -fno-omit-frame-pointer -m64 -o main %FILE%
+    gcc -g3 -Og -fno-omit-frame-pointer -m64 -o main %FILE%
     goto fine
 )
 
-gcc -g -Og -fno-omit-frame-pointer -m64 -o main %FILE%
+gcc -g3 -Og -fno-omit-frame-pointer -m64 -o main %FILE%
 
 :fine

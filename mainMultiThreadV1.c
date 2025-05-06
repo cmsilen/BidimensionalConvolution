@@ -82,7 +82,7 @@ int16_t** depthMap;
 
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
-    double denominator = sqrt(2 * M_PI * sigma * sigma);
+    double denominator = sqrt(2 * 3.14 * sigma * sigma);
     double exponent = -(i * i + j * j) / (2 * sigma * sigma);
     return (1.0 / denominator) * exp(exponent);
 }
