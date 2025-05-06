@@ -5,7 +5,7 @@
 #include <math.h>
 #include <locale.h>
 
-#define SIGMA_MAX 5
+#define SIGMA_MAX 0.5
 #define ROWS_MATRIX 2160
 #define COLUMNS_MATRIX 1440
 #define MAX_NUMBER 5
@@ -31,6 +31,24 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     matrix = malloc(sizeof(int16_t*) * rows);
     for(i = 0; i < rows; i++) {
         matrix[i] = malloc(sizeof(int16_t) * cols);
+        for(j = 0; j < cols; j++) {
+            matrix[i][j] = 0;
+        }
+    }
+    return matrix;
+}
+
+double** initializedoubleMatrix(uint16_t rows, uint16_t cols) {
+    uint16_t i, j = 0;
+    double** matrix;
+
+    if (rows == 0 || cols == 0) {
+        return 0;
+    }
+
+    matrix = malloc(sizeof(double*) * rows);
+    for(i = 0; i < rows; i++) {
+        matrix[i] = malloc(sizeof(double) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -84,17 +102,21 @@ int16_t** depthMap;
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
     double denominator = sqrt(2 * 3.14 * sigma * sigma);
-    double exponent = (i * i + j * j) / (2 * sigma * sigma);
+
+    double it = i - ROWS_FILTER / 2;
+    double jt = j - COLUMNS_FILTER / 2;
+
+    double exponent = (it * it + jt * jt) / (2 * sigma * sigma);
     return (1.0 / denominator) * exp(exponent);
 }
 
 // depends on the coords of the matrix
 double sigmaFunction(uint16_t i, uint16_t j) {
-    return depthMap[i][j] * SIGMA_MAX;
+    return (depthMap[i][j] == 0 ? 1 : depthMap[i][j]) * SIGMA_MAX;
 }
 
 // to compute the filter given the coords of the matrix
-void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
+void computeFilter(double** filter, uint16_t row, uint16_t col) {
     for (uint16_t i = 0; i < ROWS_FILTER; i++) {
         for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
             filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
@@ -102,8 +124,8 @@ void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
     }
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
-    int16_t result = 0;
+int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
+    double result = 0;
     uint16_t i, j;
 
     uint16_t startX = 0;
@@ -127,6 +149,9 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
         }
         k++;
     }
+
+    if (result > 255)
+        return 255;
     return result;
 }
 
@@ -143,7 +168,7 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
 
-    int16_t** filter = initializeMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    double** filter = initializedoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
