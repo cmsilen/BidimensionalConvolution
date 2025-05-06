@@ -16,14 +16,14 @@ int16_t** img;
 int16_t** depth;
 int16_t** out_img;
 
-int16_t** initializeMatrix(uint16_t rows, uint16_t cols);
+double** initializeMatrix(uint16_t rows, uint16_t cols);
 int read_pgm(const char* filename, int16_t** img, int* width, int* height);
 int write_pgm(const char* filename, int16_t** out, int width, int height);
 
 double gaussianBlur(uint16_t i, uint16_t j, double sigma);
 double sigmaFunction(uint16_t i, uint16_t j);
-void computeFilter(int16_t** filter, uint16_t row, uint16_t col);
-int16_t applyFilter(int16_t** matrix, uint16_t y, uint16_t x, int16_t** filter);
+void computeFilter(double** filter, uint16_t row, uint16_t col);
+int16_t applyFilter(int16_t** matrix, uint16_t y, uint16_t x, double** filter);
 
 int main(int argc, char *argv[]) 
 {
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    int16_t** filter = initializeMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    double** filter = initializeMatrix(ROWS_FILTER, COLUMNS_FILTER);
 
     for(int j = 0; j < 512; j++) {
         for(int k = 0; k < 512; k++) {
@@ -75,7 +75,7 @@ double sigmaFunction(uint16_t i, uint16_t j) {
 }
 
 // to compute the filter given the coords of the matrix
-void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
+void computeFilter(double** filter, uint16_t row, uint16_t col) {
     for (uint16_t i = 0; i < ROWS_FILTER; i++) {
         for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
             filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
@@ -83,7 +83,7 @@ void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
     }
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
+int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
     int16_t result = 0;
     uint16_t i, j;
 
@@ -186,17 +186,17 @@ int write_pgm(const char* filename, int16_t** out, int width, int height) {
     return 0;
 }
 
-int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
+double** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    double** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
     }
 
-    matrix = malloc(sizeof(int16_t*) * rows);
+    matrix = malloc(sizeof(double*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(int16_t*) * cols);
+        matrix[i] = malloc(sizeof(double*) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
