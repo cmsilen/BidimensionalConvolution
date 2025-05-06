@@ -38,17 +38,17 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-float** initializefloatMatrix(uint16_t rows, uint16_t cols) {
+double** initializeDoubleMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    float** matrix;
+    double** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
     }
 
-    matrix = malloc(sizeof(float*) * rows);
+    matrix = malloc(sizeof(double*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(float) * cols);
+        matrix[i] = malloc(sizeof(double) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -95,18 +95,18 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-float fast_exp(float x) {
-    const int k = 21;  // exp(-x) = (exp(-x/k))^k
+double fast_exp(double x) {
+    const int k = 40; // x/k ∈ [0, 5] anche se x = 200
     double z = x / k;
 
-    // Padé(3,3) per exp(-z)
+    // Padé(3,3)
     double z2 = z * z;
     double z3 = z2 * z;
     double num = 1.0 - z + 0.5 * z2 - z3 / 6.0;
     double den = 1.0 + z + 0.5 * z2 + z3 / 6.0;
     double base = num / den;
 
-    // Esponenziazione rapida: base^k
+    // Esponenziazione rapida base^k
     double result = 1.0;
     double p = base;
     int n = k;
@@ -124,23 +124,23 @@ float fast_exp(float x) {
 int16_t** depthMap;
 
 // depends on sigma and the coords of the filter
-float gaussianBlur(uint16_t i, uint16_t j, float sigma) {
-    float denominator = sqrt(2 * 3.14 * sigma * sigma);
+double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
+    double denominator = sqrt(2 * 3.14 * sigma * sigma);
 
-    float it = i - ROWS_FILTER / 2;
-    float jt = j - COLUMNS_FILTER / 2;
+    double it = i - ROWS_FILTER / 2;
+    double jt = j - COLUMNS_FILTER / 2;
 
-    float exponent = (it * it + jt * jt) / (2 * sigma * sigma);
+    double exponent = (it * it + jt * jt) / (2 * sigma * sigma);
     return (1.0 / denominator) * fast_exp(exponent);
 }
 
 // depends on the coords of the matrix
-float sigmaFunction(uint16_t i, uint16_t j) {
+double sigmaFunction(uint16_t i, uint16_t j) {
     return (depthMap[i][j] == 0 ? 1 : depthMap[i][j]) * SIGMA_MAX;
 }
 
 // to compute the filter given the coords of the matrix
-void computeFilter(float** filter, uint16_t row, uint16_t col) {
+void computeFilter(double** filter, uint16_t row, uint16_t col) {
     for (uint16_t i = 0; i < ROWS_FILTER; i++) {
         for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
             filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
@@ -148,8 +148,8 @@ void computeFilter(float** filter, uint16_t row, uint16_t col) {
     }
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, float** filter) {
-    float result = 0;
+int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
+    double result = 0;
     uint16_t i, j;
 
     uint16_t startX = 0;
@@ -192,7 +192,7 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
 
-    float** filter = initializefloatMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    double** filter = initializeDoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
@@ -207,7 +207,7 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     return 0;
 }
 
-float experiment(uint8_t nThreads, uint8_t debug) {
+double experiment(uint8_t nThreads, uint8_t debug) {
     LARGE_INTEGER start, end, freq;
     QueryPerformanceFrequency(&freq);
 
@@ -259,7 +259,7 @@ float experiment(uint8_t nThreads, uint8_t debug) {
     WaitForMultipleObjects(nThreads, threads, TRUE, INFINITE);
     QueryPerformanceCounter(&end);
 
-    float elapsedTime = (float)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
+    double elapsedTime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
     if(debug) {
         printf("ended computations\n");
         printf("execution time: %.3f ms\n", elapsedTime);
@@ -306,7 +306,7 @@ int main(int argc, char *argv[]) {
         results[i] = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
     }
 
-    float resultExTime = experiment(NThread, DEBUG);
+    double resultExTime = experiment(NThread, DEBUG);
 
     printf("%d threads, %d imgs, %u filter: %.3f ms\n", NThread, NImgs, ROWS_FILTER, resultExTime);
 
