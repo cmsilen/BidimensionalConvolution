@@ -6,8 +6,8 @@
 #include <locale.h>
 
 #define SIGMA_MAX 5
-#define ROWS_MATRIX 3840
-#define COLUMNS_MATRIX 2160
+#define ROWS_MATRIX 2160
+#define COLUMNS_MATRIX 1440
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -30,7 +30,7 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
 
     matrix = malloc(sizeof(int16_t*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(int16_t*) * cols);
+        matrix[i] = malloc(sizeof(int16_t) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -76,6 +76,16 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     }
     return matrix;
 }
+
+double fast_exp(double x) {
+    double x2 = x * x;
+    double x3 = x2 * x;
+
+    double numerator = 1.0 - x + (x2 / 2.0) - (x3 / 6.0);
+    double denominator = 1.0 + x + (x2 / 2.0) + (x3 / 6.0);
+
+    return numerator / denominator;
+}
 // ---------------------------------------------------------- //
 
 int16_t** depthMap;
@@ -83,16 +93,20 @@ int16_t** depthMap;
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
     double denominator = sqrt(2 * M_PI * sigma * sigma);
-    double exponent = -(i * i + j * j) / (2 * sigma * sigma);
-    return (1.0 / denominator) * exp(exponent);
+    double exponent = (i * i + j * j) / (2 * sigma * sigma);
+    return (1.0 / denominator) * fast_exp(exponent);
+}
+
+// depends on the coords of the matrix
+double sigmaFunction(uint16_t i, uint16_t j) {
+    return depthMap[i][j] * SIGMA_MAX;
 }
 
 // to compute the filter given the coords of the matrix
 void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
-    double sigma = depthMap[row][col] * SIGMA_MAX;
     for (uint16_t i = 0; i < ROWS_FILTER; i++) {
         for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
-            filter[i][j] = gaussianBlur(i, j, sigma);
+            filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
         }
     }
 }
@@ -272,10 +286,10 @@ int main(int argc, char *argv[]) {
     }
 
 	if(isScalability > 0) {
-		FILE* file = fopen("resultsV4/scalability.csv", "r");
+		FILE* file = fopen("resultsV3/scalability.csv", "r");
 	    int exists = file != NULL;
 	    fclose(file);
-    	char filename[100] = "resultsV4/scalability.csv";
+    	char filename[100] = "resultsV3/scalability.csv";
     	file = fopen(filename, "a");
 
 	    if(exists == 0) {
@@ -287,7 +301,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-    char filename[100] = "resultsV4/executionTime_";
+    char filename[100] = "resultsV3/executionTime_";
     concatStringNumber(filename, NImgs);
     strcat(filename, "IMGS.csv\0");
     FILE* file = fopen(filename, "r");
