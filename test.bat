@@ -16,8 +16,8 @@ REM Compila con gcc
 call compile %~1
 
 
-for /L %%i in (1,1,20) do (
-    for %%j in (1,5,20) do (
+for /L %%i in (1,1,18) do (
+    for %%j in (1,5,10) do (
         echo Esecuzione: main %%i threads %%j imgs
         main %%i %%j 7 0 1
         main %%i %%j 7 0 1

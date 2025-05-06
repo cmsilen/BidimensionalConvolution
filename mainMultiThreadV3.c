@@ -6,8 +6,8 @@
 #include <locale.h>
 
 #define SIGMA_MAX 5
-#define ROWS_MATRIX 3840
-#define COLUMNS_MATRIX 2160
+#define ROWS_MATRIX 2160
+#define COLUMNS_MATRIX 1440
 #define MAX_NUMBER 5
 #define MIN_NUMBER -5
 #define MIN(a,b) (((a)<(b))?(a):(b))
@@ -30,7 +30,7 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
 
     matrix = malloc(sizeof(int16_t*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(int16_t*) * cols);
+        matrix[i] = malloc(sizeof(int16_t) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -82,8 +82,8 @@ int16_t** depthMap;
 
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
-    int16_t denominator = 2 * M_PI * sigma * sigma;
-    int16_t exponent = -(i * i + j * j) / (2 * sigma * sigma);
+    double denominator = sqrt(2 * M_PI * sigma * sigma);
+    double exponent = -(i * i + j * j) / (2 * sigma * sigma);
     return (1.0 / denominator) * exp(exponent);
 }
 
