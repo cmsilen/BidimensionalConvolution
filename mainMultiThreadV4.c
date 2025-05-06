@@ -96,17 +96,28 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
 }
 
 float fast_exp(float x) {
-    const int k = 21; // exp(-x) = (exp(-x/k))^k → x/k ∈ [0, 5]
-    float y = x / k;
+    const int k = 21;  // exp(-x) = (exp(-x/k))^k
+    double z = x / k;
 
-    // Padé(3,3) per exp(-y)
-    float y2 = y * y;
-    float y3 = y2 * y;
-    float num = 1.0 - y + 0.5 * y2 - y3 / 6.0;
-    float den = 1.0 + y + 0.5 * y2 + y3 / 6.0;
-    float approx = num / den;
+    // Padé(3,3) per exp(-z)
+    double z2 = z * z;
+    double z3 = z2 * z;
+    double num = 1.0 - z + 0.5 * z2 - z3 / 6.0;
+    double den = 1.0 + z + 0.5 * z2 + z3 / 6.0;
+    double base = num / den;
 
-    return pow(approx, k);
+    // Esponenziazione rapida: base^k
+    double result = 1.0;
+    double p = base;
+    int n = k;
+
+    while (n > 0) {
+        if (n & 1) result *= p;
+        p *= p;
+        n >>= 1;
+    }
+
+    return result;
 }
 // ---------------------------------------------------------- //
 
