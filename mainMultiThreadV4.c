@@ -326,10 +326,10 @@ int main(int argc, char *argv[]) {
     }
 
 	if(isScalability > 0) {
-		FILE* file = fopen("resultsV3/scalability.csv", "r");
+		FILE* file = fopen("resultsV4/scalability.csv", "r");
 	    int exists = file != NULL;
 	    fclose(file);
-    	char filename[100] = "resultsV3/scalability.csv";
+    	char filename[100] = "resultsV4/scalability.csv";
     	file = fopen(filename, "a");
 
 	    if(exists == 0) {
@@ -341,7 +341,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-    char filename[100] = "resultsV3/executionTime_";
+    char filename[100] = "resultsV4/executionTime_";
     concatStringNumber(filename, NImgs);
     strcat(filename, "IMGS.csv\0");
     FILE* file = fopen(filename, "r");
