@@ -5,16 +5,16 @@
 #include <stdbool.h>
 #include <windows.h>
 
-#define ROWS_TERRAIN 1600
-#define COLUMNS_TERRAIN 1600
+#define ROWS_TERRAIN 2600
+#define COLUMNS_TERRAIN 2600
 #define MIN_ALTITUDE 0
 #define MAX_ALTITUDE 254
-#define N_THREADS 2
+#define N_THREADS 32
 
 #pragma region LIST
 
 typedef struct Node {
-    struct Node** next;
+    struct Node* next[8];
     uint16_t x;
     uint16_t y;
 } Node;
@@ -56,7 +56,6 @@ Node* makeNode(uint16_t x, uint16_t y)
     Node* new_node = (Node*)malloc(sizeof(Node));
     new_node->x = x;
     new_node->y = y;
-    new_node->next = (Node**)malloc(sizeof(Node*) * 8);
     memset(new_node->next, 0, sizeof(Node*) * 8);
 
     return new_node;
@@ -95,23 +94,39 @@ void placeSource(uint8_t* terrain, Node** cellList, uint16_t x, uint16_t y);
 
 #pragma endregion
 
+CRITICAL_SECTION cs;
+uint32_t last_task_x = 0, last_task_y = 0;
+bool getTask(uint32_t* task_x, uint32_t* task_y)
+{
+    EnterCriticalSection(&cs);
+
+    if (last_task_x == COLUMNS_TERRAIN - 1 && last_task_y == ROWS_TERRAIN - 1) {
+        LeaveCriticalSection(&cs);
+        return false;
+    }
+
+    last_task_x++;
+    if (last_task_x == COLUMNS_TERRAIN) {
+        last_task_x = 0;
+        last_task_y++;
+    }
+
+    *task_x = last_task_x;
+    *task_y = last_task_y;
+    LeaveCriticalSection(&cs);
+
+    return true;
+}
+
 uint8_t* terrain;
 Node** list;
 
-typedef struct ThreadParams {
-    uint16_t sx, sy, ex, ey;
-} ThreadParams;
-
 DWORD WINAPI threadFun(LPVOID lpParam) 
 {
-    ThreadParams* params = (ThreadParams*)lpParam;
-
-    for (uint16_t y = params->sy; y <= params->ey; y++) 
+    uint32_t task_x, task_y;
+    while (getTask(&task_x, &task_y)) 
     {
-        for (uint16_t x = params->sx; x <= params->ex; x++) 
-        {
-            placeSource(terrain, &list[y * COLUMNS_TERRAIN + x], x, y);
-        }
+        placeSource(terrain, &list[task_y * COLUMNS_TERRAIN + task_x], task_x, task_y);
     }
 
     return 0;
@@ -126,47 +141,23 @@ int main(int argc, char *argv[])
     // Show terrain map
     //printTerrain(terrain);
 
-    // Preparing Threads
+    // Init threads
     LARGE_INTEGER start, end, freq;
-    QueryPerformanceFrequency(&freq);
-
     HANDLE threads[N_THREADS];
-    ThreadParams params[N_THREADS];
 
-    uint32_t nCells = ROWS_TERRAIN * COLUMNS_TERRAIN / N_THREADS;
-    uint8_t remainingCells = (ROWS_TERRAIN * COLUMNS_TERRAIN) % N_THREADS;
-    uint32_t lastAssignedCell = 0;
-
-    for(uint8_t i = 0; i < N_THREADS; i++) 
-    {
-        uint32_t start_linear_coordinate = lastAssignedCell;
-        uint32_t end_linear_coordinate = lastAssignedCell + nCells - 1;
-
-        if (remainingCells > 0) {
-            end_linear_coordinate++;
-            remainingCells--;
-        }
-
-        lastAssignedCell = end_linear_coordinate + 1;
-
-        params[i].sx = start_linear_coordinate % COLUMNS_TERRAIN;
-        params[i].sy = start_linear_coordinate / COLUMNS_TERRAIN;
-        params[i].ex = end_linear_coordinate % COLUMNS_TERRAIN;
-        params[i].ey = end_linear_coordinate / COLUMNS_TERRAIN;
-        
-        // Assign Debug
-        printf("Thread n%d -> Start: %d | End: %d\n", i, start_linear_coordinate, end_linear_coordinate);
-        printf("sx: %d | sy: %d | ex: %d | ey: %d\n", params[i].sx, params[i].sy, params[i].ex, params[i].ey);
-    }
-
+    InitializeCriticalSection(&cs);
+    QueryPerformanceFrequency(&freq);
+    
     // Compute
+    last_task_x = 0; last_task_y = 0;
     QueryPerformanceCounter(&start);
     for(uint8_t i = 0; i < N_THREADS; i++) 
     {
-        threads[i] = CreateThread(NULL, 0, threadFun, &params[i], 0, NULL);
+        threads[i] = CreateThread(NULL, 0, threadFun, NULL, 0, NULL);
     }
     WaitForMultipleObjects(N_THREADS, threads, TRUE, INFINITE);
     QueryPerformanceCounter(&end);
+    DeleteCriticalSection(&cs);
 
     double elapsedTime = (double)(end.QuadPart - start.QuadPart) / freq.QuadPart * 1000.0;
     printf("execution time: %.3f ms\n", elapsedTime);
