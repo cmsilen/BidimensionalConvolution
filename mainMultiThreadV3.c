@@ -77,24 +77,15 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-double fast_exp(double x) {
-    double x2 = x * x;
-    double x3 = x2 * x;
-
-    double numerator = 1.0 - x + (x2 / 2.0) - (x3 / 6.0);
-    double denominator = 1.0 + x + (x2 / 2.0) + (x3 / 6.0);
-
-    return numerator / denominator;
-}
 // ---------------------------------------------------------- //
 
 int16_t** depthMap;
 
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
-    double denominator = sqrt(2 * M_PI * sigma * sigma);
+    double denominator = sqrt(2 * 3.14 * sigma * sigma);
     double exponent = (i * i + j * j) / (2 * sigma * sigma);
-    return (1.0 / denominator) * fast_exp(exponent);
+    return (1.0 / denominator) * exp(exponent);
 }
 
 // depends on the coords of the matrix
