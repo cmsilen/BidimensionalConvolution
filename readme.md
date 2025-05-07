@@ -26,8 +26,8 @@ assegnazione di righe ai threads al posto delle colonne
 
 ### OTTIMIZZAZIONE V3
 ```c++
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
-    int16_t result = 0;
+int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
+    double result = 0;
     uint16_t i, j;
 
     uint16_t startX = 0;
@@ -51,8 +51,81 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
         }
         k++;
     }
+
+    if (result > 255)
+        return 255;
     return result;
 }
 ```
 Si evita di ricalcolare gli indici per più volte per ogni iterazione e rimossi gli if dentro i loop.
 
+### OTTIMIZZAZIONE V4
+```c++
+double fast_exp(double x) {
+    const int k = 40; // x/k ∈ [0, 5] anche se x = 200
+    double z = x / k;
+
+    // Padé(3,3)
+    double z2 = z * z;
+    double z3 = z2 * z;
+    double num = 1.0 - z + 0.5 * z2 - z3 / 6.0;
+    double den = 1.0 + z + 0.5 * z2 + z3 / 6.0;
+    double base = num / den;
+
+    // Esponenziazione rapida base^k
+    double result = 1.0;
+    double p = base;
+    int n = k;
+
+    while (n > 0) {
+        if (n & 1) result *= p;
+        p *= p;
+        n >>= 1;
+    }
+
+    return result;
+}
+```
+approssimazione dell'esponenziale.
+
+### OTTIMIZZAZIONE V5
+```bash
+gcc -g3 -O3 -ffast-math -march=native -fno-omit-frame-pointer -m64 -o main %FILE%
+```
+ottimizzazioni aggressive del compilatore attive (-O3), ottimizzazione matematiche aggressive (-ffast-math),
+ottimizzazioni personalizzate per il tipo di processore (-march=native)
+
+### OTTIMIZZAZIONE V6
+```c++
+DWORD WINAPI threadFun(LPVOID lpParam) {
+    uint16_t i, j, k;
+
+    double** filter = initializeDoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    uint16_t currentRow;
+
+    while(1) {
+        // Entra nella sezione critica
+        WaitForSingleObject(hMutex, INFINITE);
+
+        if (lastRow >= ROWS_MATRIX) {
+            // Esci se il limite è stato raggiunto
+            ReleaseMutex(hMutex);
+            break;
+        }
+        currentRow = lastRow;
+        lastRow++;
+        ReleaseMutex(hMutex);
+
+        for(i = 0; i < LAYERS_NUM; i++) {
+            for(k = 0; k < COLUMNS_MATRIX; k++) {
+                computeFilter(filter, currentRow, k);
+                results[i][currentRow][k] = applyFilter(matrices[i], currentRow, k, filter);
+            }
+        }
+    }
+
+    free(filter);
+    return 0;
+}
+```
+load balancing tra threads.
