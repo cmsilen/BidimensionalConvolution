@@ -197,12 +197,12 @@ int16_t*** results;
 uint16_t lastRow = 0;
 uint16_t lastLayer = 0;
 
-#define BATCH_SIZE 100
+#define BATCH_SIZE 50
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
 
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
     double** filter = initializeDoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
     uint16_t currentRow;
     uint16_t currentLayer;
@@ -240,13 +240,51 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     return 0;
 }
 
+int get_physical_core_affinities(DWORD_PTR* affinities, int max) {
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX buffer = NULL;
+    DWORD len = 0;
+    int count = 0;
+
+    // Chiamata per sapere quanto buffer serve
+    GetLogicalProcessorInformationEx(RelationProcessorCore, NULL, &len);
+    buffer = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)malloc(len);
+    if (!GetLogicalProcessorInformationEx(RelationProcessorCore, buffer, &len)) {
+        free(buffer);
+        return 0;
+    }
+
+    BYTE* ptr = (BYTE*)buffer;
+    while (ptr < ((BYTE*)buffer + len) && count < max) {
+        PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX info = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)ptr;
+
+        if (info->Relationship == RelationProcessorCore) {
+            // Prendi solo il primo bit attivo per ogni core fisico
+            KAFFINITY mask = info->Processor.GroupMask[0].Mask;
+            for (int i = 0; i < 64; ++i) {
+                if (mask & ((KAFFINITY)1 << i)) {
+                    affinities[count++] = ((KAFFINITY)1 << i);
+                    break;
+                }
+            }
+        }
+        ptr += info->Size;
+    }
+
+    free(buffer);
+    return count;
+}
+
 double experiment(uint8_t nThreads, uint8_t debug) {
     LARGE_INTEGER start, end, freq;
     QueryPerformanceFrequency(&freq);
 
     uint16_t i;
     HANDLE threads[nThreads];
-    struct parameters* params[nThreads];
+    uint8_t* threadIndexes = malloc(sizeof(uint8_t) * nThreads);
+
+    DWORD_PTR coreAffinities[64];
+    int physicalCoreCount = get_physical_core_affinities(coreAffinities, 64);
+
 
     // Crea il mutex
     hMutex = CreateMutex(NULL, FALSE, NULL);
@@ -255,19 +293,26 @@ double experiment(uint8_t nThreads, uint8_t debug) {
         return 1;
     }
 
-
-    // computation phase
     if(debug) {
-        printf("\n");
-        printf("\n");
         printf("starting computations\n");
     }
 
     QueryPerformanceCounter(&start);
-    for(i = 0; i < nThreads; i++) {
-        threads[i] = CreateThread(NULL, 0, threadFun, NULL, 0, NULL);
-        //SetThreadPriority(threads[i], THREAD_PRIORITY_TIME_CRITICAL);
+    if(nThreads < 8) {
+        for(i = 0; i < nThreads; i++) {
+            threadIndexes[i] = i;
+            threads[i] = CreateThread(NULL, 0, threadFun, (LPVOID)&threadIndexes[i], 0, NULL);
+            SetThreadAffinityMask(threads[i], coreAffinities[i]); // Affinità fisica
+            SetThreadPriority(threads[i], THREAD_PRIORITY_TIME_CRITICAL);
+        }
     }
+    else {
+        for(i = 0; i < nThreads; i++) {
+            threads[i] = CreateThread(NULL, 0, threadFun, NULL, 0, NULL);
+            //SetThreadPriority(threads[i], THREAD_PRIORITY_TIME_CRITICAL);
+        }
+    }
+
     WaitForMultipleObjects(nThreads, threads, TRUE, INFINITE);
     QueryPerformanceCounter(&end);
 
