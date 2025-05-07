@@ -138,7 +138,7 @@ int16_t** depthMap;
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
     double sigmaSq2 = sigma * sigma * 2;
-    double denominator = fast_sqrt(sigmaSq2 * 3.14);
+    double denominator = 2.51 * sigma;
 
     double it = i - HALF_ROW;
     double jt = j - HALF_COLUMN;
@@ -195,13 +195,17 @@ int16_t*** matrices;
 int16_t*** results;
 
 uint16_t lastRow = 0;
+uint16_t lastLayer = 0;
 
+#define BATCH_SIZE 100
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
 
+    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
     double** filter = initializeDoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
     uint16_t currentRow;
+    uint16_t currentLayer;
 
     while(1) {
         // Entra nella sezione critica
@@ -209,18 +213,26 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 
         if (lastRow >= ROWS_MATRIX) {
             // Esci se il limite è stato raggiunto
+            lastRow = 0;
+            lastLayer++;
+        }
+        if(lastLayer >= LAYERS_NUM) {
             ReleaseMutex(hMutex);
             break;
         }
-        currentRow = lastRow;
-        lastRow++;
-        ReleaseMutex(hMutex);
 
-        for(i = 0; i < LAYERS_NUM; i++) {
+        currentRow = lastRow;
+        lastRow += BATCH_SIZE;
+        ReleaseMutex(hMutex);
+        uint16_t rowsDone = 0;
+
+        while(currentRow < ROWS_MATRIX && rowsDone < BATCH_SIZE) {
             for(k = 0; k < COLUMNS_MATRIX; k++) {
                 computeFilter(filter, currentRow, k);
-                results[i][currentRow][k] = applyFilter(matrices[i], currentRow, k, filter);
+                results[currentLayer][currentRow][k] = applyFilter(matrices[currentLayer], currentRow, k, filter);
             }
+            currentRow++;
+            rowsDone++;
         }
     }
 
