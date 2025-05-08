@@ -141,7 +141,7 @@ void computeFilter(double** filter, uint16_t row, uint16_t col) {
 }
 
 uint8_t applyFilter(uint8_t** matrix, uint16_t x, uint16_t y, double** filter) {
-    uint16_t result = 0;
+    double result = 0;
     uint16_t i, j;
 
     for (i = 0; i < ROWS_FILTER; i++) {
