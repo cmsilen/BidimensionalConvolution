@@ -8,8 +8,8 @@
 #define SIGMA_MAX 5
 #define ROWS_MATRIX 2160
 #define COLUMNS_MATRIX 1440
-#define MAX_NUMBER 5
-#define MIN_NUMBER -5
+#define MAX_NUMBER 255
+#define MIN_NUMBER 0
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 #define DEBUG 0
@@ -20,17 +20,17 @@ uint16_t LAYERS_NUM;
 
 
 // ------------------------ UTILITY ------------------------ //
-int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
+uint8_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    uint8_t** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
     }
 
-    matrix = malloc(sizeof(int16_t*) * rows);
+    matrix = malloc(sizeof(uint8_t*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(int16_t) * cols);
+        matrix[i] = malloc(sizeof(uint8_t) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -38,7 +38,25 @@ int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-void uninitializeMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
+double** initializedoubleMatrix(uint16_t rows, uint16_t cols) {
+    uint16_t i, j = 0;
+    double** matrix;
+
+    if (rows == 0 || cols == 0) {
+        return 0;
+    }
+
+    matrix = malloc(sizeof(double*) * rows);
+    for(i = 0; i < rows; i++) {
+        matrix[i] = malloc(sizeof(double) * cols);
+        for(j = 0; j < cols; j++) {
+            matrix[i][j] = 0;
+        }
+    }
+    return matrix;
+}
+
+void uninitializeMatrix(uint8_t** matrix, uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
 
     if (rows == 0 || cols == 0) {
@@ -60,9 +78,9 @@ int16_t randomNumber(int16_t min, int16_t max) {
     //return rand() % (max - min + 1) + min;
 }
 
-int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
+uint8_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    uint8_t** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
@@ -76,9 +94,30 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     }
     return matrix;
 }
+
+void disegna_cerchio_sfumato(uint8_t** matrice, int width, int height) {
+    int centerX = width / 2;
+    int centerY = height / 2;
+    float radius = width / 3.0f;
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int dx = x - centerX;
+            int dy = y - centerY;
+            float distanza = sqrtf(dx * dx + dy * dy);
+
+            if (distanza <= radius) {
+                float valore = 255.0f * (1.0f - (distanza / radius));
+                matrice[x][y] = (uint8_t)(valore + 0.5f); // arrotondamento
+            } else {
+                matrice[x][y] = 0;
+            }
+        }
+    }
+}
 // ---------------------------------------------------------- //
 
-int16_t** depthMap;
+uint8_t** depthMap;
 
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
@@ -93,7 +132,7 @@ double sigmaFunction(uint16_t i, uint16_t j) {
 }
 
 // to compute the filter given the coords of the matrix
-void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
+void computeFilter(double** filter, uint16_t row, uint16_t col) {
     for (uint16_t i = 0; i < ROWS_FILTER; i++) {
         for (uint16_t j = 0; j < COLUMNS_FILTER; j++) {
             filter[i][j] = gaussianBlur(i, j, sigmaFunction(row, col));
@@ -101,8 +140,8 @@ void computeFilter(int16_t** filter, uint16_t row, uint16_t col) {
     }
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) {
-    int16_t result = 0;
+uint8_t applyFilter(uint8_t** matrix, uint16_t x, uint16_t y, double** filter) {
+    uint16_t result = 0;
     uint16_t i, j;
 
     for (i = 0; i < ROWS_FILTER; i++) {
@@ -113,6 +152,9 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, int16_t** filter) 
             result += matrix[x - (ROWS_FILTER / 2) + i][y - (COLUMNS_FILTER / 2) + j] * filter[i][j];
         }
     }
+
+    if (result > 255)
+        return 255;
     return result;
 }
 
@@ -121,15 +163,15 @@ struct parameters {
     uint16_t endIndex;
 };
 
-int16_t*** matrices;
-int16_t*** results;
+uint8_t*** matrices;
+uint8_t*** results;
 
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
     struct parameters* params = (struct parameters*)lpParam;
 
-    int16_t** filter = initializeMatrix(ROWS_FILTER, COLUMNS_FILTER);
+    double** filter = initializedoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
 
     for(i = 0; i < LAYERS_NUM; i++) {
         for(j = params->startIndex; j < params->endIndex; j++) {
@@ -233,9 +275,10 @@ int main(int argc, char *argv[]) {
     int saveData = atoi(argv[5]);
 
     uint8_t i;
-    matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    results = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    depthMap = generateRandomMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
+    matrices = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+    results = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+    depthMap = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
+    disegna_cerchio_sfumato(depthMap, ROWS_MATRIX, COLUMNS_MATRIX);
 
     // generation phase
     for(i = 0; i < LAYERS_NUM; i++) {
