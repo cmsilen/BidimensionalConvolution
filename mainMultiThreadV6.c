@@ -5,7 +5,7 @@
 #include <math.h>
 #include <locale.h>
 
-#define SIGMA_MAX 0.01
+#define SIGMA_MAX 5
 #define ROWS_MATRIX 2160
 #define COLUMNS_MATRIX 1440
 #define MAX_NUMBER 255
@@ -18,20 +18,19 @@ uint16_t ROWS_FILTER;
 uint16_t COLUMNS_FILTER;
 uint16_t LAYERS_NUM;
 
-HANDLE hMutex;
 
 // ------------------------ UTILITY ------------------------ //
-int16_t** initializeMatrix(uint16_t rows, uint16_t cols) {
+uint8_t** initializeMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    uint8_t** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
     }
 
-    matrix = malloc(sizeof(int16_t*) * rows);
+    matrix = malloc(sizeof(uint8_t*) * rows);
     for(i = 0; i < rows; i++) {
-        matrix[i] = malloc(sizeof(int16_t) * cols);
+        matrix[i] = malloc(sizeof(uint8_t) * cols);
         for(j = 0; j < cols; j++) {
             matrix[i][j] = 0;
         }
@@ -57,7 +56,7 @@ double** initializeDoubleMatrix(uint16_t rows, uint16_t cols) {
     return matrix;
 }
 
-void uninitializeMatrix(int16_t** matrix, uint16_t rows, uint16_t cols) {
+void uninitializeMatrix(uint8_t** matrix, uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
 
     if (rows == 0 || cols == 0) {
@@ -79,9 +78,9 @@ int16_t randomNumber(int16_t min, int16_t max) {
     //return rand() % (max - min + 1) + min;
 }
 
-int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
+uint8_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     uint16_t i, j = 0;
-    int16_t** matrix;
+    uint8_t** matrix;
 
     if (rows == 0 || cols == 0) {
         return 0;
@@ -95,6 +94,28 @@ int16_t** generateRandomMatrix(uint16_t rows, uint16_t cols) {
     }
     return matrix;
 }
+
+void disegna_cerchio_sfumato(uint8_t** matrice, int width, int height) {
+    int centerX = width / 2;
+    int centerY = height / 2;
+    float radius = width / 3.0f;
+
+    for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+            int dx = x - centerX;
+            int dy = y - centerY;
+            float distanza = sqrtf(dx * dx + dy * dy);
+
+            if (distanza <= radius) {
+                float valore = 255.0f * (1.0f - (distanza / radius));
+                matrice[x][y] = (uint8_t)(valore + 0.5f); // arrotondamento
+            } else {
+                matrice[x][y] = 0;
+            }
+        }
+    }
+}
+// ---------------------------------------------------------- //
 
 double fast_exp(double x) {
     const int k = 40; // x/k ∈ [0, 5] anche se x = 200
@@ -120,18 +141,13 @@ double fast_exp(double x) {
 
     return result;
 }
-// ---------------------------------------------------------- //
 
-int16_t** depthMap;
+uint8_t** depthMap;
 
 // depends on sigma and the coords of the filter
 double gaussianBlur(uint16_t i, uint16_t j, double sigma) {
     double denominator = sqrt(2 * 3.14 * sigma * sigma);
-
-    double it = i - ROWS_FILTER / 2;
-    double jt = j - COLUMNS_FILTER / 2;
-
-    double exponent = (it * it + jt * jt) / (2 * sigma * sigma);
+    double exponent = -(i * i + j * j) / (2 * sigma * sigma);
     return (1.0 / denominator) * fast_exp(exponent);
 }
 
@@ -149,7 +165,7 @@ void computeFilter(double** filter, uint16_t row, uint16_t col) {
     }
 }
 
-int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
+uint8_t applyFilter(uint8_t** matrix, uint16_t x, uint16_t y, double** filter) {
     double result = 0;
     uint16_t i, j;
 
@@ -185,11 +201,11 @@ struct parameters {
     uint16_t endIndex;
 };
 
-int16_t*** matrices;
-int16_t*** results;
+uint8_t*** matrices;
+uint8_t*** results;
 
 uint16_t lastRow = 0;
-
+HANDLE hMutex;
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
@@ -212,6 +228,10 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 
         for(i = 0; i < LAYERS_NUM; i++) {
             for(k = 0; k < COLUMNS_MATRIX; k++) {
+                if(depthMap[currentRow][k] == 0) {
+                    results[i][currentRow][k] = matrices[i][currentRow][k];
+                    continue;
+                }
                 computeFilter(filter, currentRow, k);
                 results[i][currentRow][k] = applyFilter(matrices[i], currentRow, k, filter);
             }
@@ -290,9 +310,10 @@ int main(int argc, char *argv[]) {
     int saveData = atoi(argv[5]);
 
     uint8_t i;
-    matrices = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    results = malloc(sizeof(int16_t**) * LAYERS_NUM);
-    depthMap = generateRandomMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
+    matrices = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+    results = malloc(sizeof(uint8_t**) * LAYERS_NUM);
+    depthMap = initializeMatrix(ROWS_MATRIX, COLUMNS_MATRIX);
+    disegna_cerchio_sfumato(depthMap, ROWS_MATRIX, COLUMNS_MATRIX);
 
     // generation phase
     for(i = 0; i < LAYERS_NUM; i++) {
@@ -320,10 +341,10 @@ int main(int argc, char *argv[]) {
     }
 
 	if(isScalability > 0) {
-		FILE* file = fopen("resultsV6/scalability.csv", "r");
+		FILE* file = fopen("resultsV1/scalability.csv", "r");
 	    int exists = file != NULL;
 	    fclose(file);
-    	char filename[100] = "resultsV6/scalability.csv";
+    	char filename[100] = "resultsV1/scalability.csv";
     	file = fopen(filename, "a");
 
 	    if(exists == 0) {
@@ -335,7 +356,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-    char filename[100] = "resultsV6/executionTime_";
+    char filename[100] = "resultsV1/executionTime_";
     concatStringNumber(filename, NImgs);
     strcat(filename, "IMGS.csv\0");
     FILE* file = fopen(filename, "r");
