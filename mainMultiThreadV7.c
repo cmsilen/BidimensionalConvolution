@@ -208,7 +208,7 @@ HANDLE hMutex;
 uint16_t lastRow = 0;
 uint16_t lastLayer = 0;
 
-#define BATCH_SIZE 1
+#define BATCH_SIZE 200
 
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
