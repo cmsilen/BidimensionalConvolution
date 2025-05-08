@@ -22,8 +22,6 @@ effettua 5 test per ogni configurazione di filtro. I threads sono fissati a 16 e
 
 ## OTTIMIZZAZIONI #
 ### OTTIMIZZAZIONE V1 -> V4
-1 - assegnazione di righe ai threads al posto delle colonne
-___
 ```c++
 int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
     double result = 0;
@@ -87,6 +85,8 @@ double fast_exp(double x) {
 approssimazione dell'esponenziale.
 ___
 ### OTTIMIZZAZIONE V4 -> V6
+assegnazione di righe ai threads al posto delle colonne
+___
 ```bash
 gcc -g3 -O3 -ffast-math -march=native -fno-omit-frame-pointer -m64 -o main %FILE%
 ```
