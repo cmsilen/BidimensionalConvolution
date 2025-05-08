@@ -5,7 +5,7 @@
 #include <math.h>
 #include <locale.h>
 
-#define SIGMA_MAX 5
+#define SIGMA_MAX 0.5
 #define ROWS_MATRIX 2160
 #define COLUMNS_MATRIX 1440
 #define MAX_NUMBER 255
