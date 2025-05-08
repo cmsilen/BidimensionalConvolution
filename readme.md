@@ -20,10 +20,10 @@ test per ricavare il tempo di esecuzione al variare della dimensione del filtro
 ```
 effettua 5 test per ogni configurazione di filtro. I threads sono fissati a 16 ed il carico di lavoro alto.
 
-## OTTIMIZZAZIONI ##
-### OTTIMIZZAZIONE V4
-assegnazione di righe ai threads al posto delle colonne\
-\--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+## OTTIMIZZAZIONI #
+### OTTIMIZZAZIONE V1 -> V4
+1 - assegnazione di righe ai threads al posto delle colonne
+___
 ```c++
 int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
     double result = 0;
@@ -56,8 +56,8 @@ int16_t applyFilter(int16_t** matrix, uint16_t x, uint16_t y, double** filter) {
     return result;
 }
 ```
-Si evita di ricalcolare gli indici per più volte per ogni iterazione e rimossi gli if dentro i loop.\
-\--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+Si evita di ricalcolare gli indici per più volte per ogni iterazione e rimossi gli if dentro i loop.
+___
 ```c++
 double fast_exp(double x) {
     const int k = 40; // x/k ∈ [0, 5] anche se x = 200
@@ -84,15 +84,16 @@ double fast_exp(double x) {
     return result;
 }
 ```
-approssimazione dell'esponenziale.\
-\--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+approssimazione dell'esponenziale.
+___
 ### OTTIMIZZAZIONE V6
 ```bash
 gcc -g3 -O3 -ffast-math -march=native -fno-omit-frame-pointer -m64 -o main %FILE%
 ```
-ottimizzazioni aggressive del compilatore attive (-O3), ottimizzazione matematiche aggressive (-ffast-math),
-ottimizzazioni personalizzate per il tipo di processore (-march=native)\
-\--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ottimizzazioni aggressive del compilatore attive (-O3),\
+ottimizzazione matematiche aggressive (-ffast-math),\
+ottimizzazioni personalizzate per il tipo di processore (-march=native)
+___
 ```c++
 DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
