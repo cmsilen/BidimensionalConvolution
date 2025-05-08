@@ -86,7 +86,7 @@ double fast_exp(double x) {
 ```
 approssimazione dell'esponenziale.
 ___
-### OTTIMIZZAZIONE V6
+### OTTIMIZZAZIONE V4 -> V6
 ```bash
 gcc -g3 -O3 -ffast-math -march=native -fno-omit-frame-pointer -m64 -o main %FILE%
 ```
