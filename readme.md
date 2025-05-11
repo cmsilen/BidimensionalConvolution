@@ -116,6 +116,10 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 
         for(i = 0; i < LAYERS_NUM; i++) {
             for(k = 0; k < COLUMNS_MATRIX; k++) {
+                if(depthMap[currentRow][k] == 0) {
+                    results[i][currentRow][k] = matrices[i][currentRow][k];
+                    continue;
+                }
                 computeFilter(filter, currentRow, k);
                 results[i][currentRow][k] = applyFilter(matrices[i], currentRow, k, filter);
             }
