@@ -127,3 +127,5 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 }
 ```
 load balancing tra threads.
+___
+Evita il calcolo del filtro per i pixel in cui depthmap = 0
