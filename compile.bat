@@ -32,6 +32,11 @@ IF "%~1"=="7" (
     goto fine
 )
 
+IF "%~1"=="7+" (
+    gcc -g3 -O3 -ffast-math -march=native -funroll-loops -fno-tree-pre -ftree-vectorize -fopt-info-vec -fno-omit-frame-pointer -m64 -o main %FILE%
+    goto fine
+)
+
 gcc -g3 -Og -fno-omit-frame-pointer -m64 -o main %FILE%
 
 :fine
