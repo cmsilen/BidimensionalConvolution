@@ -220,3 +220,10 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 ```
 Assegnazione ai thread di righe nello stesso layer,\
 salvataggio dei filtri calcolati per poterli usare dopo
+___
+```bash
+gcc -g3 -O3 -ffast-math -march=native -funroll-loops -fno-tree-pre -ftree-vectorize -fopt-info-vec -fno-omit-frame-pointer -m64 -o main %FILE%
+```
+loop unrolling (-funroll-loops)\
+Disabilita Partial Redundancy Elimination, ovvero l'eliminazione di calcoli ripetuti (-fno-tree-pre)\
+Abilita la vettorizzazione automatica dei loop, cioè il compilatore proverà a trasformare operazioni scalari in operazioni SIMD (-ftree-vectorize)
