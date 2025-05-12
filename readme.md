@@ -84,6 +84,32 @@ double fast_exp(double x) {
 ```
 approssimazione dell'esponenziale.
 ___
+```c++
+DWORD WINAPI threadFun(LPVOID lpParam) {
+    uint16_t i, j, k;
+    struct parameters* params = (struct parameters*)lpParam;
+
+    double** filter = initializedoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
+
+    for(i = 0; i < LAYERS_NUM; i++) {
+        for(j = params->startIndex; j < params->endIndex; j++) {
+            for(k = 0; k < COLUMNS_MATRIX; k++) {
+                if(depthMap[j][k] == 0) {
+                    results[i][j][k] = matrices[i][j][k];
+                    continue;
+                }
+                computeFilter(filter, j, k);
+                results[i][j][k] = applyFilter(matrices[i], j, k, filter);
+            }
+        }
+    }
+
+    free(filter);
+    return 0;
+}
+```
+Evita il calcolo del filtro per i pixel in cui depthmap = 0
+___
 ### OTTIMIZZAZIONE V4 -> V6
 assegnazione di righe ai threads al posto delle colonne
 ___
@@ -131,5 +157,3 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 }
 ```
 load balancing tra threads.
-___
-Evita il calcolo del filtro per i pixel in cui depthmap = 0
