@@ -178,8 +178,8 @@ uint8_t applyFilter(uint8_t** matrix, uint16_t x, uint16_t y, double** filter) {
 
     uint16_t endX = ROWS_FILTER;
     uint16_t endY = COLUMNS_FILTER;
-    if(x >= ROWS_MATRIX - HALF_ROW) endX = HALF_ROW + (ROWS_MATRIX - x - 1);
-    if(y >= COLUMNS_MATRIX - HALF_COLUMN) endY = HALF_COLUMN + (COLUMNS_MATRIX - y - 1);
+    if(x >= ROWS_MATRIX - HALF_ROW) endX = HALF_ROW + ROWS_MATRIX - x;
+    if(y >= COLUMNS_MATRIX - HALF_COLUMN) endY = HALF_COLUMN + COLUMNS_MATRIX - y;
 
     uint16_t k = x - HALF_ROW + startX;
     for (i = startX; i < endX; i++) {
