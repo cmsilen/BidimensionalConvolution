@@ -216,7 +216,6 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
     uint16_t i, j, k;
 
     //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
-    double** filter = initializeDoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
     uint16_t currentRow;
     uint16_t currentLayer;
 
@@ -263,7 +262,6 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
         }
     }
 
-    free(filter);
     return 0;
 }
 

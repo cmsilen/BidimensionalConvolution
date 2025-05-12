@@ -157,3 +157,66 @@ DWORD WINAPI threadFun(LPVOID lpParam) {
 }
 ```
 load balancing tra threads.
+___
+### OTTIMIZZAZIONE V6 -> V7+
+```c++
+#define BATCH_SIZE 45
+#define MUTEX_NUM 128
+HANDLE filtersMutex[MUTEX_NUM];
+double** computedFilters[256];
+
+DWORD WINAPI threadFun(LPVOID lpParam) {
+    uint16_t i, j, k;
+
+    //SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_TIME_CRITICAL);
+    uint16_t currentRow;
+    uint16_t currentLayer;
+
+    while(1) {
+        // Entra nella sezione critica
+        WaitForSingleObject(workMutex, INFINITE);
+
+        if (lastRow >= ROWS_MATRIX) {
+            // Esci se il limite è stato raggiunto
+            lastRow = 0;
+            lastLayer++;
+        }
+        if(lastLayer >= LAYERS_NUM) {
+            ReleaseMutex(workMutex);
+            break;
+        }
+
+        currentRow = lastRow;
+        lastRow += BATCH_SIZE;
+		currentLayer = lastLayer;
+        ReleaseMutex(workMutex);
+        uint16_t rowsDone = 0;
+
+        while(currentRow < ROWS_MATRIX && rowsDone < BATCH_SIZE) {
+            for(k = 0; k < COLUMNS_MATRIX; k++) {
+                uint8_t depthValue = depthMap[currentRow][k];
+                if(depthValue == 0) {
+                    results[currentLayer][currentRow][k] = matrices[currentLayer][currentRow][k];
+                    continue;
+                }
+
+                if(computedFilters[depthValue] == NULL) {
+                    WaitForSingleObject(filtersMutex[depthValue % MUTEX_NUM], INFINITE);
+                    if(computedFilters[depthValue] == NULL) {
+                        computedFilters[depthValue] = initializeDoubleMatrix(ROWS_FILTER, COLUMNS_FILTER);
+                        computeFilter(computedFilters[depthValue], currentRow, k);
+                    }
+                    ReleaseMutex(filtersMutex[depthValue % MUTEX_NUM]);
+                }
+                results[currentLayer][currentRow][k] = applyFilter(matrices[currentLayer], currentRow, k, computedFilters[depthValue]);
+            }
+            currentRow++;
+            rowsDone++;
+        }
+    }
+
+    return 0;
+}
+```
+Assegnazione ai thread di righe nello stesso layer,\
+salvataggio dei filtri calcolati per poterli usare dopo
