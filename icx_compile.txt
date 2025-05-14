@@ -1,0 +1,1 @@
+icx -g -Og -fno-inline -qopt-report mainMultiThreadV1.c -o main.exe
